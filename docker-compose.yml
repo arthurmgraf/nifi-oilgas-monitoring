@@ -97,8 +97,6 @@ services:
     hostname: nifi-registry
     ports:
       - "${NIFI_REGISTRY_PORT:-18080}:18080"
-    volumes:
-      - nifi-registry-data:/opt/nifi-registry/nifi-registry-current/database
     networks:
       - oilgas-net
     restart: unless-stopped
@@ -391,8 +389,6 @@ volumes:
     name: oilgas-nifi-provenance
   nifi-state:
     name: oilgas-nifi-state
-  nifi-registry-data:
-    name: oilgas-nifi-registry-data
   postgres-data:
     name: oilgas-postgres-data
   timescaledb-data:
