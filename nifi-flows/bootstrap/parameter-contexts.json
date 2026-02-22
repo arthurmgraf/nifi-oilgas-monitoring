@@ -235,7 +235,7 @@
         {
           "name": "mqtt.topic.sensors",
           "description": "MQTT topic pattern for sensor readings",
-          "value": "platforms/+/sensors/+/readings",
+          "value": "sensors/+/+/data",
           "sensitive": false
         }
       ]
@@ -475,7 +475,7 @@
         {
           "name": "mqtt.topic.sensors",
           "description": "MQTT topic pattern for sensor readings",
-          "value": "platforms/+/sensors/+/readings",
+          "value": "sensors/+/+/data",
           "sensitive": false
         }
       ]
@@ -715,7 +715,7 @@
         {
           "name": "mqtt.topic.sensors",
           "description": "MQTT topic pattern for sensor readings",
-          "value": "platforms/+/sensors/+/readings",
+          "value": "sensors/+/+/data",
           "sensitive": false
         }
       ]
