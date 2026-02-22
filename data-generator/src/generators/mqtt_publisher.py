@@ -46,7 +46,7 @@ class MQTTPublisher:
         rc: mqtt.ReasonCode,
         properties: mqtt.Properties | None = None,
     ) -> None:
-        if rc == mqtt.ReasonCode(mqtt.CONNACK_ACCEPTED):
+        if not rc.is_failure:
             self._connected = True
             logger.info(
                 "MQTT connected to %s:%d (client=%s)",
