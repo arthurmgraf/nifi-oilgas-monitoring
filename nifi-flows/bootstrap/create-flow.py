@@ -149,7 +149,9 @@ class NiFiClient:
         })
 
     def _ensure_authenticated(self) -> None:
-        """Obtain or refresh the NiFi access token."""
+        """Obtain or refresh the NiFi access token (skipped in HTTP mode)."""
+        if self.base_url.startswith("http://"):
+            return  # No auth needed in unsecured HTTP mode
         if self._token and time.time() < self._token_expiry - 60:
             return
 
@@ -829,8 +831,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--nifi-url",
-        default="https://localhost:8443",
-        help="NiFi base URL (default: https://localhost:8443)",
+        default="http://localhost:8080",
+        help="NiFi base URL (default: http://localhost:8080)",
     )
     parser.add_argument(
         "--context",
