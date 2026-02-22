@@ -78,7 +78,7 @@ fi
 info "Pulling Docker images (this may take several minutes on first run)..."
 
 IMAGES=(
-    "apache/nifi:2.8.0"
+    "apache/nifi:1.28.1"
     "apache/nifi-registry:2.0.0"
     "confluentinc/cp-kafka:7.7.1"
     "confluentinc/cp-schema-registry:7.7.1"
@@ -103,7 +103,7 @@ success "Docker images pulled."
 # ---------------------------------------------------------------------------
 info "Building custom images..."
 
-info "  Building nifi-oilgas (custom NiFi 2.8.0)..."
+info "  Building nifi-oilgas (custom NiFi 1.28.1)..."
 docker build \
     -t nifi-oilgas:latest \
     -f "${PROJECT_ROOT}/docker/nifi/Dockerfile" \

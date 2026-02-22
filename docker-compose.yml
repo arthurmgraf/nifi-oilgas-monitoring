@@ -19,7 +19,7 @@
 services:
 
   # =========================================================================
-  # 1. Apache NiFi 2.8.0 (Data Flow Engine)
+  # 1. Apache NiFi 1.28.1 (Data Flow Engine)
   # =========================================================================
   nifi:
     build:
@@ -34,9 +34,9 @@ services:
       SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?NIFI_PASSWORD is required (min 12 chars)}
       NIFI_SENSITIVE_PROPS_KEY: ${NIFI_SENSITIVE_KEY:?NIFI_SENSITIVE_KEY is required (min 12 chars)}
-      # --- JVM (NiFi 2.x Docker entrypoint env vars) ---
-      NIFI_JVM_HEAP_INIT: ${NIFI_HEAP_INIT:-1g}
-      NIFI_JVM_HEAP_MAX: ${NIFI_HEAP_MAX:-2g}
+      # --- JVM ---
+      NIFI_JVM_HEAP_INIT: ${NIFI_HEAP_INIT:-512m}
+      NIFI_JVM_HEAP_MAX: ${NIFI_HEAP_MAX:-1g}
       # --- Kafka connectivity ---
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-nifi}
@@ -66,7 +66,6 @@ services:
       - nifi-content:/opt/nifi/nifi-current/content_repository
       - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
       - nifi-state:/opt/nifi/nifi-current/state
-      - ./nifi-python-processors:/opt/nifi/nifi-current/python/extensions
       - ./data/import:/data/import
     depends_on:
       kafka:

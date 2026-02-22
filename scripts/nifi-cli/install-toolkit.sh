@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# NiFi Oil & Gas Monitoring Platform - Install NiFi Toolkit 2.8.0
+# NiFi Oil & Gas Monitoring Platform - Install NiFi Toolkit 1.28.1
 # =============================================================================
 # Usage: ./scripts/nifi-cli/install-toolkit.sh
 # Downloads and installs NiFi Toolkit CLI to ./tools/nifi-toolkit/.
@@ -27,7 +27,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-NIFI_VERSION="2.8.0"
+NIFI_VERSION="1.28.1"
 TOOLKIT_NAME="nifi-toolkit-${NIFI_VERSION}"
 TOOLKIT_ARCHIVE="${TOOLKIT_NAME}-bin.zip"
 TOOLKIT_DIR="${PROJECT_ROOT}/tools/nifi-toolkit"

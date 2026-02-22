@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   NiFi Oil & Gas Monitoring Platform ~ logback.xml
-  Structured JSON logging for NiFi 2.8.0.
+  Structured JSON logging for NiFi 1.28.1.
   APP_FILE writes JSON log lines to nifi-app.log for Elasticsearch/Loki/CloudWatch.
   Console output remains human readable for interactive debugging.
 -->
