@@ -103,10 +103,10 @@ services:
     profiles: ["dev", "staging", "prod"]
 
   # =========================================================================
-  # 3. Apache Kafka 3.7.1 (Event Streaming - KRaft mode)
+  # 3. Confluent Kafka 7.7.1 (Event Streaming - KRaft mode)
   # =========================================================================
   kafka:
-    image: apache/kafka:3.7.1
+    image: confluentinc/cp-kafka:7.7.1
     container_name: oilgas-kafka
     hostname: kafka
     ports:
@@ -121,7 +121,7 @@ services:
       # Dev: PLAINTEXT for simplicity. Staging/Prod: SASL_SSL via NiFi Parameter Contexts.
       KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT=PLAINTEXT,INTERNAL=PLAINTEXT,CONTROLLER=PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       # --- Broker settings ---
@@ -130,11 +130,11 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
-      CLUSTER_ID: "oilgas-kafka-cluster-001"
+      CLUSTER_ID: oilgas-kafka-cluster-001
       # --- Logging ---
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 > /dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 10s
       start_period: 60s
@@ -148,7 +148,7 @@ services:
   # 4. Kafka Init (Topic Creation - one-shot)
   # =========================================================================
   kafka-init:
-    image: apache/kafka:3.7.1
+    image: confluentinc/cp-kafka:7.7.1
     container_name: oilgas-kafka-init
     entrypoint: ["/bin/bash", "/scripts/create-topics.sh"]
     environment:

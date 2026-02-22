@@ -27,8 +27,7 @@ RETRY_INTERVAL=5
 echo "[kafka-init] Waiting for Kafka broker at ${BOOTSTRAP_SERVER} ..."
 
 retries=0
-until /opt/kafka/bin/kafka-broker-api-versions.sh \
-        --bootstrap-server "${BOOTSTRAP_SERVER}" > /dev/null 2>&1; do
+until kafka-broker-api-versions --bootstrap-server "${BOOTSTRAP_SERVER}" > /dev/null 2>&1; do
     retries=$((retries + 1))
     if [ "${retries}" -ge "${MAX_RETRIES}" ]; then
         echo "[kafka-init] ERROR: Kafka not ready after $((MAX_RETRIES * RETRY_INTERVAL))s. Exiting."
@@ -51,7 +50,7 @@ create_topic() {
 
     echo "[kafka-init] Creating topic: ${topic_name} (partitions=${partitions}, retention=${retention_ms}ms)"
 
-    /opt/kafka/bin/kafka-topics.sh \
+    kafka-topics \
         --bootstrap-server "${BOOTSTRAP_SERVER}" \
         --create \
         --if-not-exists \
@@ -102,7 +101,7 @@ create_topic "compliance.emissions"   3  "${RETENTION_365D}" "cleanup.policy=com
 # ---------------------------------------------------------------------------
 echo ""
 echo "[kafka-init] ===== Topic summary ====="
-/opt/kafka/bin/kafka-topics.sh \
+kafka-topics \
     --bootstrap-server "${BOOTSTRAP_SERVER}" \
     --list
 
