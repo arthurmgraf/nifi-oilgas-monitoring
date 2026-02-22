@@ -66,7 +66,7 @@ services:
       - nifi-content:/opt/nifi/nifi-current/content_repository
       - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
       - nifi-state:/opt/nifi/nifi-current/state
-      - ./nifi-python-processors:/opt/nifi/nifi-current/python
+      - ./nifi-python-processors:/opt/nifi/nifi-current/python/extensions
       - ./data/import:/data/import
     depends_on:
       kafka:
