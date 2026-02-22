@@ -38,7 +38,7 @@ _SENSOR_SPECS: dict[str, list[tuple[SensorType, str, float, float, str]]] = {
         (SensorType.FLOW_RATE, "m3/h", 0.0, 1000.0, "gas_outlet_flow"),
     ],
     "Pump": [
-        (SensorType.PRESSURE, "bar", 50.0, 350.0, "discharge_pressure"),
+        (SensorType.PRESSURE, "bar", 50.0, 350.0, "pump_discharge"),
         (SensorType.TEMPERATURE, "degC", 30.0, 100.0, "bearing_temp"),
         (SensorType.VIBRATION, "mm/s", 0.0, 20.0, "motor_vibration"),
         (SensorType.FLOW_RATE, "m3/h", 0.0, 200.0, "injection_flow"),

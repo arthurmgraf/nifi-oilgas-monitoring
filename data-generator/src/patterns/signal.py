@@ -60,7 +60,7 @@ SENSOR_CONFIGS: dict[tuple[str, str], SignalConfig] = {
         setpoint=500.0, noise_std=30.0, seasonal_amplitude=40.0, seasonal_period_hours=12.0
     ),
     # Pump
-    ("PRESSURE", "discharge_pressure"): SignalConfig(setpoint=200.0, noise_std=5.0),
+    ("PRESSURE", "pump_discharge"): SignalConfig(setpoint=200.0, noise_std=5.0),
     ("TEMPERATURE", "bearing_temp"): SignalConfig(
         setpoint=55.0, noise_std=1.5, seasonal_amplitude=3.0
     ),
