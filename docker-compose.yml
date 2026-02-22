@@ -37,6 +37,8 @@ services:
       # --- JVM ---
       NIFI_JVM_HEAP_INIT: ${NIFI_HEAP_INIT:-512m}
       NIFI_JVM_HEAP_MAX: ${NIFI_HEAP_MAX:-1g}
+      # --- Disable JMX (avoids bootstrap/app port conflict on 9010) ---
+      JAVA_TOOL_OPTIONS: ""
       # --- Kafka connectivity ---
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-nifi}
