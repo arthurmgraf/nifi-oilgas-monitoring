@@ -6,8 +6,15 @@ temperature, pressure, vibration, and flow-rate measurement types.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    class StrEnum(str, Enum):
+        """Backport of StrEnum for Python < 3.11."""
 
 from src.models.equipment import get_equipment_for_platform
 
