@@ -18,7 +18,9 @@ class GeneratorConfig:
     mqtt_broker: str = "localhost"
     mqtt_port: int = 1883
     nifi_http_url: str = "http://localhost:8080"
-    platforms: list[str] = field(default_factory=lambda: ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO"])
+    platforms: list[str] = field(
+        default_factory=lambda: ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO"]
+    )
     interval_seconds: int = 2
     anomaly_probability: float = 0.05
     log_level: str = "INFO"
