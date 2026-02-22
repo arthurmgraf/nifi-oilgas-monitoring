@@ -38,7 +38,6 @@ services:
     # Persist registry database locally for dev
     volumes:
       - nifi-registry-data:/opt/nifi-registry/nifi-registry-current/database
-      - ./nifi-flows:/opt/nifi-registry/nifi-registry-current/flow_storage
 
   # =========================================================================
   # Kafka - Development overrides
