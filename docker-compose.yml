@@ -28,8 +28,11 @@ services:
     container_name: oilgas-nifi
     hostname: nifi
     ports:
-      - "${NIFI_WEB_PORT:-8443}:8443"
+      - "${NIFI_WEB_PORT:-8080}:8080"
     environment:
+      # --- Web server (HTTP mode for dev) ---
+      NIFI_WEB_HTTP_PORT: 8080
+      NIFI_WEB_HTTP_HOST: 0.0.0.0
       # --- Authentication ---
       SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?NIFI_PASSWORD is required (min 12 chars)}
@@ -75,7 +78,7 @@ services:
       timescaledb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -kfs https://localhost:8443/nifi-api/system-diagnostics > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/nifi-api/system-diagnostics > /dev/null || exit 1"]
       interval: 60s
       timeout: 30s
       start_period: 600s

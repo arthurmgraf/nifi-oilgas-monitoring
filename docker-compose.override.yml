@@ -23,7 +23,7 @@ services:
       NIFI_HEAP_MAX: ${NIFI_HEAP_MAX:-1g}
       NIFI_LOG_LEVEL: INFO
     ports:
-      - "${NIFI_WEB_PORT:-8443}:8443"
+      - "${NIFI_WEB_PORT:-8080}:8080"
     volumes:
       - nifi-data:/opt/nifi/nifi-current/flowfile_repository
       - nifi-content:/opt/nifi/nifi-current/content_repository
