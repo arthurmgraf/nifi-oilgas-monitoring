@@ -35,9 +35,9 @@ services:
   # NiFi Registry - Development overrides
   # =========================================================================
   nifi-registry:
-    # Persist registry database locally for dev
-    volumes:
-      - nifi-registry-data:/opt/nifi-registry/nifi-registry-current/database
+    # Use ephemeral storage for dev (no volume mount to avoid H2 migration issues)
+    environment:
+      NIFI_REGISTRY_WEB_HTTP_PORT: 18080
 
   # =========================================================================
   # Kafka - Development overrides
