@@ -39,9 +39,7 @@ SENSOR_CONFIGS: dict[tuple[str, str], SignalConfig] = {
         setpoint=45.0, noise_std=1.5, seasonal_amplitude=2.0
     ),
     ("VIBRATION", "bearing_vibration"): SignalConfig(setpoint=4.5, noise_std=0.8),
-    ("TEMPERATURE", "oil_temp"): SignalConfig(
-        setpoint=75.0, noise_std=2.0, seasonal_amplitude=3.0
-    ),
+    ("TEMPERATURE", "oil_temp"): SignalConfig(setpoint=75.0, noise_std=2.0, seasonal_amplitude=3.0),
     ("PRESSURE", "oil_pressure"): SignalConfig(setpoint=5.5, noise_std=0.3),
     # Separator
     ("PRESSURE", "vessel_pressure"): SignalConfig(
