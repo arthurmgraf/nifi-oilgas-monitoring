@@ -19,7 +19,7 @@
         {
           "name": "mqtt.broker.password",
           "description": "MQTT broker password",
-          "value": "CHANGE_ME_MQTT_PASSWORD",
+          "value": "${MQTT_PASSWORD}",
           "sensitive": true
         },
         {
@@ -49,7 +49,7 @@
         {
           "name": "kafka.sasl.password",
           "description": "Kafka SASL password",
-          "value": "CHANGE_ME_KAFKA_PASSWORD",
+          "value": "${KAFKA_SASL_PASSWORD}",
           "sensitive": true
         },
         {
@@ -85,7 +85,7 @@
         {
           "name": "postgresql.password",
           "description": "PostgreSQL connection password",
-          "value": "CHANGE_ME_PG_PASSWORD",
+          "value": "${PG_REF_PASSWORD}",
           "sensitive": true
         },
         {
@@ -109,7 +109,7 @@
         {
           "name": "timescaledb.port",
           "description": "TimescaleDB sensor data port",
-          "value": "5433",
+          "value": "5432",
           "sensitive": false
         },
         {
@@ -127,13 +127,13 @@
         {
           "name": "timescaledb.password",
           "description": "TimescaleDB connection password",
-          "value": "CHANGE_ME_TSDB_PASSWORD",
+          "value": "${TSDB_PASSWORD}",
           "sensitive": true
         },
         {
           "name": "timescaledb.connection.url",
           "description": "TimescaleDB JDBC connection URL",
-          "value": "jdbc:postgresql://timescaledb:5433/sensordb",
+          "value": "jdbc:postgresql://timescaledb:5432/sensordb",
           "sensitive": false
         },
         {
@@ -151,7 +151,7 @@
         {
           "name": "minio.secret.key",
           "description": "MinIO secret key",
-          "value": "CHANGE_ME_MINIO_SECRET",
+          "value": "${MINIO_SECRET_KEY}",
           "sensitive": true
         },
         {

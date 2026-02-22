@@ -7,12 +7,12 @@ to run as a one-time setup script after the NiFi Docker container is healthy.
 Usage:
     export NIFI_USERNAME=admin
     export NIFI_PASSWORD=admin_password
-    python create-flow.py [--nifi-url https://nifi:8443] [--context dev-params]
+    python create-flow.py [--nifi-url http://localhost:8080] [--env-file .env.dev]
 
 Environment Variables:
-    NIFI_USERNAME: NiFi admin username (required)
-    NIFI_PASSWORD: NiFi admin password (required)
-    NIFI_URL:      NiFi base URL (default: https://localhost:8443)
+    NIFI_USERNAME: NiFi admin username (required for HTTPS mode)
+    NIFI_PASSWORD: NiFi admin password (required for HTTPS mode)
+    NIFI_URL:      NiFi base URL (default: http://localhost:8080)
 """
 
 from __future__ import annotations
@@ -20,6 +20,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -563,6 +565,44 @@ class NiFiClient:
             )
 
 
+_ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
+
+
+def _substitute_env_vars(value: str) -> str:
+    """Replace ${VAR_NAME} patterns with environment variable values."""
+    def _replace(match: re.Match) -> str:
+        var_name = match.group(1)
+        env_val = os.environ.get(var_name)
+        if env_val is None:
+            logger.warning("Environment variable %s not set, keeping placeholder", var_name)
+            return match.group(0)
+        return env_val
+    return _ENV_VAR_PATTERN.sub(_replace, value)
+
+
+def load_env_file(filepath: str) -> None:
+    """Load environment variables from a .env file (KEY=VALUE format)."""
+    path = Path(filepath)
+    if not path.exists():
+        logger.warning("Env file not found: %s", filepath)
+        return
+
+    loaded = 0
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip("'\"")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+                    loaded += 1
+    logger.info("Loaded %d environment variables from %s", loaded, filepath)
+
+
 def load_json_config(filename: str) -> dict[str, Any]:
     """Load a JSON configuration file from the bootstrap directory.
 
@@ -612,10 +652,17 @@ def create_parameter_contexts(
         if context_name != "all" and name != context_name:
             continue
 
+        resolved_params = []
+        for param in ctx.get("parameters", []):
+            resolved = dict(param)
+            if isinstance(resolved.get("value"), str):
+                resolved["value"] = _substitute_env_vars(resolved["value"])
+            resolved_params.append(resolved)
+
         ctx_id = client.create_parameter_context(
             name=name,
             description=ctx.get("description", ""),
-            parameters=ctx.get("parameters", []),
+            parameters=resolved_params,
         )
 
         if name == context_name:
@@ -851,6 +898,11 @@ def parse_args() -> argparse.Namespace:
         help="Create flow but do not start process groups",
     )
     parser.add_argument(
+        "--env-file",
+        default=None,
+        help="Path to .env file for variable substitution in parameter values",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable debug logging",
@@ -865,15 +917,16 @@ def main() -> None:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    import os
+    if args.env_file:
+        load_env_file(args.env_file)
 
     nifi_url = os.environ.get("NIFI_URL", args.nifi_url)
-    username = os.environ.get("NIFI_USERNAME")
-    password = os.environ.get("NIFI_PASSWORD")
+    username = os.environ.get("NIFI_USERNAME", "admin")
+    password = os.environ.get("NIFI_PASSWORD", "")
 
-    if not username or not password:
+    if nifi_url.startswith("https://") and (not username or not password):
         logger.error(
-            "NIFI_USERNAME and NIFI_PASSWORD environment variables are required"
+            "NIFI_USERNAME and NIFI_PASSWORD environment variables are required for HTTPS mode"
         )
         sys.exit(1)
 

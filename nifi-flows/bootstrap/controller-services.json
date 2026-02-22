@@ -91,19 +91,6 @@
         "Validation query": "SELECT 1"
       },
       "state": "ENABLED"
-    },
-    {
-      "name": "KafkaConnectionService",
-      "type": "org.apache.nifi.kafka.service.Kafka3ConnectionService",
-      "description": "Kafka 3.x connection service for producing and consuming sensor data topics",
-      "properties": {
-        "bootstrap.servers": "#{kafka.bootstrap.servers}",
-        "security.protocol": "#{kafka.security.protocol}",
-        "sasl.mechanism": "#{kafka.sasl.mechanism}",
-        "sasl.username": "#{kafka.sasl.username}",
-        "sasl.password": "#{kafka.sasl.password}"
-      },
-      "state": "ENABLED"
     }
   ]
 }
