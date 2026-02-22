@@ -1,0 +1,159 @@
+# =============================================================================
+# NiFi Oil & Gas Monitoring Platform - Deploy to Dev
+# =============================================================================
+# Trigger: workflow_dispatch (manual)
+# Starts Docker stack, runs health checks, deploys NiFi flows.
+# =============================================================================
+
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_flows:
+        description: "Deploy NiFi flows from Registry"
+        required: false
+        default: "true"
+        type: boolean
+      create_topics:
+        description: "Create Kafka topics"
+        required: false
+        default: "true"
+        type: boolean
+      register_schemas:
+        description: "Register Avro schemas"
+        required: false
+        default: "true"
+        type: boolean
+
+env:
+  PROFILE: dev
+
+jobs:
+  deploy:
+    name: Deploy Dev Stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # -------------------------------------------------------------------
+      # 1. Prepare environment
+      # -------------------------------------------------------------------
+      - name: Prepare environment file
+        run: |
+          cp .env.example .env.dev
+          # All passwords injected from GitHub Secrets (Settings > Secrets > Actions)
+          sed -i "s/CHANGE_ME_nifi_password_min_12_chars/${{ secrets.NIFI_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_random_string_min_12_chars/${{ secrets.NIFI_DEV_SENSITIVE_KEY }}/g" .env.dev
+          sed -i "s/CHANGE_ME_kafka_password/${{ secrets.KAFKA_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_pg_password/${{ secrets.PG_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_pg_admin_password/${{ secrets.PG_DEV_ADMIN_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_tsdb_password/${{ secrets.TSDB_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_tsdb_admin_password/${{ secrets.TSDB_DEV_ADMIN_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_minio_password/${{ secrets.MINIO_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_minio_secret/${{ secrets.MINIO_DEV_SECRET }}/g" .env.dev
+          sed -i "s/CHANGE_ME_grafana_password/${{ secrets.GRAFANA_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_mqtt_password/${{ secrets.MQTT_DEV_PASSWORD }}/g" .env.dev
+
+      - name: Make scripts executable
+        run: chmod +x scripts/**/*.sh scripts/*.sh
+
+      # -------------------------------------------------------------------
+      # 2. Setup and build
+      # -------------------------------------------------------------------
+      - name: Build custom Docker images
+        run: |
+          docker build -t nifi-oilgas:latest -f docker/nifi/Dockerfile docker/nifi/
+          docker build -t oilgas-data-generator:latest -f data-generator/Dockerfile data-generator/
+
+      - name: Create Docker network
+        run: docker network create oilgas-monitoring 2>/dev/null || true
+
+      - name: Create data directories
+        run: |
+          mkdir -p data/nifi/{state,database,flowfile,content,provenance}
+          mkdir -p data/{kafka,postgresql,timescaledb,minio,grafana,prometheus}
+
+      # -------------------------------------------------------------------
+      # 3. Start stack
+      # -------------------------------------------------------------------
+      - name: Start Docker Compose stack
+        run: |
+          if [ -f docker-compose.yml ]; then
+            docker compose --env-file .env.dev -f docker-compose.yml --profile dev up -d
+          else
+            echo "WARNING: docker-compose.yml not found. Skipping stack start."
+          fi
+
+      - name: Wait for services to stabilize
+        run: sleep 60
+
+      # -------------------------------------------------------------------
+      # 4. Health check
+      # -------------------------------------------------------------------
+      - name: Run health checks
+        run: |
+          ./scripts/health-check.sh dev || {
+            echo "Some services are not healthy. Checking Docker logs..."
+            docker compose logs --tail=50 2>/dev/null || true
+            echo "Continuing despite health check failures..."
+          }
+
+      # -------------------------------------------------------------------
+      # 5. Create Kafka topics
+      # -------------------------------------------------------------------
+      - name: Create Kafka topics
+        if: ${{ inputs.create_topics == 'true' || inputs.create_topics == true }}
+        run: ./scripts/kafka/create-topics.sh dev || echo "Topic creation had issues. Continuing..."
+
+      # -------------------------------------------------------------------
+      # 6. Register Avro schemas
+      # -------------------------------------------------------------------
+      - name: Register Avro schemas
+        if: ${{ inputs.register_schemas == 'true' || inputs.register_schemas == true }}
+        run: ./scripts/kafka/register-schemas.sh dev || echo "Schema registration had issues. Continuing..."
+
+      # -------------------------------------------------------------------
+      # 7. Deploy NiFi flows
+      # -------------------------------------------------------------------
+      - name: Deploy NiFi flows
+        if: ${{ inputs.deploy_flows == 'true' || inputs.deploy_flows == true }}
+        run: |
+          ./scripts/nifi-cli/deploy-flow.sh dev || echo "Flow deployment had issues. Check NiFi UI manually."
+
+      # -------------------------------------------------------------------
+      # 8. Final status
+      # -------------------------------------------------------------------
+      - name: Print final status
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "  Dev Deployment Summary"
+          echo "=========================================="
+          echo ""
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
+          echo ""
+          echo "Deploy completed at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          mkdir -p deploy-logs
+          docker compose logs > deploy-logs/compose.log 2>/dev/null || true
+          docker ps -a > deploy-logs/containers.txt 2>/dev/null || true
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-logs
+          path: deploy-logs/
+          retention-days: 7

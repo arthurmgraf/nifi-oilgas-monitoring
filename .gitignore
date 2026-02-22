@@ -1,0 +1,52 @@
+# Environment files (secrets)
+.env.dev
+.env.staging
+.env.prod
+.env.local
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+
+# Docker volumes
+data/
+!data/import/.gitkeep
+volumes/
+
+# NiFi
+nifi-data/
+nifi-content/
+nifi-provenance/
+nifi-state/
+docker/nifi/drivers/*.jar
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Backups
+backups/

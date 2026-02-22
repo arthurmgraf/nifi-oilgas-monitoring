@@ -1,0 +1,56 @@
+{
+  "type": "record",
+  "name": "EquipmentStatus",
+  "namespace": "com.oilgas.monitoring.equipment",
+  "doc": "Equipment health status derived from sensor readings",
+  "fields": [
+    {
+      "name": "equipment_id",
+      "type": "string",
+      "doc": "Unique equipment identifier"
+    },
+    {
+      "name": "platform_id",
+      "type": "string",
+      "doc": "Platform where equipment is installed"
+    },
+    {
+      "name": "equipment_name",
+      "type": "string"
+    },
+    {
+      "name": "equipment_type",
+      "type": "string"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "EquipmentHealthStatus",
+        "symbols": ["HEALTHY", "DEGRADED", "WARNING", "CRITICAL", "OFFLINE"]
+      },
+      "doc": "Current equipment health status"
+    },
+    {
+      "name": "health_score",
+      "type": "double",
+      "doc": "Health score 0.0 (failed) to 1.0 (perfect)"
+    },
+    {
+      "name": "last_maintenance",
+      "type": ["null", {"type": "long", "logicalType": "timestamp-millis"}],
+      "default": null,
+      "doc": "Last maintenance timestamp"
+    },
+    {
+      "name": "hours_since_maintenance",
+      "type": "double",
+      "doc": "Operating hours since last maintenance"
+    },
+    {
+      "name": "assessed_at",
+      "type": {"type": "long", "logicalType": "timestamp-millis"},
+      "doc": "When this status was assessed"
+    }
+  ]
+}

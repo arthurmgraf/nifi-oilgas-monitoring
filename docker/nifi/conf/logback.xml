@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  =============================================================================
+  NiFi Oil & Gas Monitoring Platform - logback.xml
+  =============================================================================
+  Structured JSON logging for NiFi 2.8.0.
+  The APP_FILE appender writes JSON-formatted log lines to nifi-app.log,
+  making them easy to ingest into Elasticsearch / Loki / CloudWatch.
+  Console output remains human-readable for interactive debugging.
+  =============================================================================
+-->
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <!-- ================================================================== -->
+    <!-- Properties                                                          -->
+    <!-- ================================================================== -->
+    <property name="LOG_DIR" value="${nifi.bootstrap.log.dir:-/opt/nifi/nifi-current/logs}" />
+    <property name="LOG_LEVEL" value="${nifi.log.level:-INFO}" />
+
+    <!-- ================================================================== -->
+    <!-- Console Appender (human-readable for docker logs)                   -->
+    <!-- ================================================================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ================================================================== -->
+    <!-- JSON File Appender (nifi-app.log -- structured for log aggregation) -->
+    <!-- ================================================================== -->
+    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/nifi-app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/nifi-app_%d{yyyy-MM-dd}_%i.log.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>14</maxHistory>
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!--
+                JSON-structured log line.  Each field is on one line so that
+                downstream parsers (Filebeat, Promtail, Fluentd) can ingest
+                the record as a single JSON object.
+            -->
+            <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","thread":"%thread","logger":"%logger{60}","message":"%replace(%msg){'\"','\\\"'}","exception":"%replace(%xException{full}){'\"','\\\"'}"}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ================================================================== -->
+    <!-- User Events Appender (audit trail)                                  -->
+    <!-- ================================================================== -->
+    <appender name="USER_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/nifi-user.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/nifi-user_%d{yyyy-MM-dd}_%i.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","logger":"%logger{60}","user":"%replace(%msg){'\"','\\\"'}"}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ================================================================== -->
+    <!-- Bootstrap Appender (plain text -- startup/shutdown)                 -->
+    <!-- ================================================================== -->
+    <appender name="BOOTSTRAP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/nifi-bootstrap.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/nifi-bootstrap_%d{yyyy-MM-dd}_%i.log.gz</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>200MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ================================================================== -->
+    <!-- Logger configuration                                                -->
+    <!-- ================================================================== -->
+
+    <!-- NiFi core -->
+    <logger name="org.apache.nifi" level="${LOG_LEVEL}" additivity="false">
+        <appender-ref ref="APP_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <!-- NiFi web / REST API -->
+    <logger name="org.apache.nifi.web" level="WARN" additivity="false">
+        <appender-ref ref="APP_FILE" />
+    </logger>
+
+    <!-- NiFi user actions (audit) -->
+    <logger name="org.apache.nifi.web.security" level="INFO" additivity="false">
+        <appender-ref ref="USER_FILE" />
+    </logger>
+    <logger name="org.apache.nifi.web.api.config" level="INFO" additivity="false">
+        <appender-ref ref="USER_FILE" />
+    </logger>
+
+    <!-- NiFi Python processors -->
+    <logger name="org.apache.nifi.py4j" level="INFO" additivity="false">
+        <appender-ref ref="APP_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+    <logger name="org.apache.nifi.python" level="INFO" additivity="false">
+        <appender-ref ref="APP_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <!-- NiFi bootstrap -->
+    <logger name="org.apache.nifi.bootstrap" level="INFO" additivity="false">
+        <appender-ref ref="BOOTSTRAP_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <!-- Kafka client (reduce chattiness) -->
+    <logger name="org.apache.kafka" level="WARN" additivity="false">
+        <appender-ref ref="APP_FILE" />
+    </logger>
+
+    <!-- Zookeeper (reduce chattiness) -->
+    <logger name="org.apache.zookeeper" level="WARN" additivity="false">
+        <appender-ref ref="APP_FILE" />
+    </logger>
+
+    <!-- Jetty -->
+    <logger name="org.eclipse.jetty" level="WARN" additivity="false">
+        <appender-ref ref="APP_FILE" />
+    </logger>
+
+    <!-- Spring Framework (reduce noise) -->
+    <logger name="org.springframework" level="WARN" additivity="false">
+        <appender-ref ref="APP_FILE" />
+    </logger>
+
+    <!-- ================================================================== -->
+    <!-- Root logger                                                         -->
+    <!-- ================================================================== -->
+    <root level="INFO">
+        <appender-ref ref="APP_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+</configuration>

@@ -1,0 +1,414 @@
+# =============================================================================
+# NiFi Oil & Gas Monitoring Platform - Docker Compose
+# =============================================================================
+# 12 services with profile-based deployment (dev, staging, prod).
+#
+# Usage:
+#   docker compose --profile dev    up -d        # Development
+#   docker compose --profile staging up -d       # Staging
+#   docker compose --profile prod   up -d        # Production
+#
+# Pre-requisites:
+#   - Copy .env.example to .env.dev and fill in values
+#   - Run: docker compose --env-file .env.dev --profile dev up -d
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+
+  # =========================================================================
+  # 1. Apache NiFi 2.8.0 (Data Flow Engine)
+  # =========================================================================
+  nifi:
+    build:
+      context: ./docker/nifi
+      dockerfile: Dockerfile
+    container_name: oilgas-nifi
+    hostname: nifi
+    ports:
+      - "${NIFI_WEB_PORT:-8443}:8443"
+    environment:
+      # --- Authentication ---
+      SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
+      SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?NIFI_PASSWORD is required (min 12 chars)}
+      NIFI_SENSITIVE_PROPS_KEY: ${NIFI_SENSITIVE_KEY:?NIFI_SENSITIVE_KEY is required (min 12 chars)}
+      # --- JVM ---
+      NIFI_HEAP_INIT: ${NIFI_HEAP_INIT:-1g}
+      NIFI_HEAP_MAX: ${NIFI_HEAP_MAX:-2g}
+      # --- Kafka connectivity ---
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-nifi}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:-}
+      # --- Schema Registry ---
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      # --- PostgreSQL reference data ---
+      PG_REF_HOST: ${PG_REF_HOST:-postgres}
+      PG_REF_PORT: ${PG_REF_PORT:-5432}
+      PG_REF_DATABASE: ${PG_REF_DATABASE:-refdata}
+      PG_REF_USERNAME: ${PG_REF_USERNAME:-nifi}
+      PG_REF_PASSWORD: ${PG_REF_PASSWORD:-}
+      # --- TimescaleDB ---
+      TSDB_HOST: ${TSDB_HOST:-timescaledb}
+      TSDB_PORT: ${TSDB_PORT:-5433}
+      TSDB_DATABASE: ${TSDB_DATABASE:-sensordb}
+      TSDB_USERNAME: ${TSDB_USERNAME:-nifi}
+      TSDB_PASSWORD: ${TSDB_PASSWORD:-}
+      # --- MinIO ---
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-nifi-service}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      # --- MQTT ---
+      MQTT_BROKER_URI: tcp://mosquitto:1883
+    volumes:
+      - nifi-data:/opt/nifi/nifi-current/flowfile_repository
+      - nifi-content:/opt/nifi/nifi-current/content_repository
+      - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
+      - nifi-state:/opt/nifi/nifi-current/state
+      - ./nifi-python-processors:/opt/nifi/nifi-current/python
+      - ./data/import:/data/import
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -kfs https://localhost:8443/nifi-api/system-diagnostics > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 15s
+      start_period: 120s
+      retries: 5
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 2. NiFi Registry 1.28.1 (Flow Version Control)
+  # =========================================================================
+  nifi-registry:
+    image: apache/nifi-registry:1.28.1
+    container_name: oilgas-nifi-registry
+    hostname: nifi-registry
+    ports:
+      - "${NIFI_REGISTRY_PORT:-18080}:18080"
+    volumes:
+      - nifi-registry-data:/opt/nifi-registry/nifi-registry-current/database
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 3. Apache Kafka 3.7.1 (Event Streaming - KRaft mode)
+  # =========================================================================
+  kafka:
+    image: apache/kafka:3.7.1
+    container_name: oilgas-kafka
+    hostname: kafka
+    ports:
+      - "${KAFKA_BROKER_PORT:-9092}:9092"
+      - "${KAFKA_INTERNAL_PORT:-29092}:29092"
+    environment:
+      # --- KRaft mode (no Zookeeper) ---
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # --- Listeners ---
+      KAFKA_LISTENERS: CLIENT://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: CLIENT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT=SASL_PLAINTEXT,INTERNAL=PLAINTEXT,CONTROLLER=PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # --- SASL configuration for CLIENT listener ---
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_JAAS_CONFIG: |
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+          username="${KAFKA_SASL_USERNAME:-nifi}"
+          password="${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}"
+          user_${KAFKA_SASL_USERNAME:-nifi}="${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}";
+      # --- Broker settings ---
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: "oilgas-kafka-cluster-001"
+      # --- Logging ---
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 4. Kafka Init (Topic Creation - one-shot)
+  # =========================================================================
+  kafka-init:
+    image: apache/kafka:3.7.1
+    container_name: oilgas-kafka-init
+    entrypoint: ["/bin/bash", "/scripts/create-topics.sh"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVER: kafka:29092
+    volumes:
+      - ./docker/kafka/create-topics.sh:/scripts/create-topics.sh:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - oilgas-net
+    restart: "no"
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 5. Confluent Schema Registry 7.7.1
+  # =========================================================================
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.7.1
+    container_name: oilgas-schema-registry
+    hostname: schema-registry
+    ports:
+      - "${SCHEMA_REGISTRY_PORT:-8081}:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: BACKWARD
+      SCHEMA_REGISTRY_DEBUG: "false"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/subjects > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 6. PostgreSQL 16 (Reference Data)
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: oilgas-postgres
+    hostname: postgres
+    ports:
+      - "${PG_REF_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${PG_REF_DATABASE:-refdata}
+      POSTGRES_USER: ${PG_REF_USERNAME:-nifi}
+      POSTGRES_PASSWORD: ${PG_REF_PASSWORD:?PG_REF_PASSWORD is required}
+    volumes:
+      - ./docker/postgresql/init:/docker-entrypoint-initdb.d:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_REF_USERNAME:-nifi} -d ${PG_REF_DATABASE:-refdata}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 7. TimescaleDB (Time-Series Storage)
+  # =========================================================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: oilgas-timescaledb
+    hostname: timescaledb
+    ports:
+      - "${TSDB_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${TSDB_DATABASE:-sensordb}
+      POSTGRES_USER: ${TSDB_USERNAME:-nifi}
+      POSTGRES_PASSWORD: ${TSDB_PASSWORD:?TSDB_PASSWORD is required}
+    volumes:
+      - ./docker/timescaledb/init:/docker-entrypoint-initdb.d:ro
+      - timescaledb-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TSDB_USERNAME:-nifi} -d ${TSDB_DATABASE:-sensordb}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 8. MinIO (S3-Compatible Data Lake)
+  # =========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: oilgas-minio
+    hostname: minio
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 9. MinIO Init (Bucket Creation - one-shot)
+  # =========================================================================
+  minio-init:
+    image: minio/mc:latest
+    container_name: oilgas-minio-init
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/sensor-data &&
+      mc mb --ignore-existing local/sensor-dlq &&
+      mc mb --ignore-existing local/sensor-backups &&
+      echo '[minio-init] All buckets created successfully.' &&
+      mc ls local
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - oilgas-net
+    restart: "no"
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 10. Grafana OSS 11.4.0 (Dashboards & Visualization)
+  # =========================================================================
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    container_name: oilgas-grafana
+    hostname: grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "http://localhost:${GRAFANA_PORT:-3000}"
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 11. Prometheus v2.54.0 (Metrics Collection)
+  # =========================================================================
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: oilgas-prometheus
+    hostname: prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 12. Eclipse Mosquitto 2 (MQTT Broker)
+  # =========================================================================
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: oilgas-mosquitto
+    hostname: mosquitto
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WS_PORT:-9883}:9883"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  oilgas-net:
+    name: oilgas-net
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  nifi-data:
+    name: oilgas-nifi-data
+  nifi-content:
+    name: oilgas-nifi-content
+  nifi-provenance:
+    name: oilgas-nifi-provenance
+  nifi-state:
+    name: oilgas-nifi-state
+  nifi-registry-data:
+    name: oilgas-nifi-registry-data
+  postgres-data:
+    name: oilgas-postgres-data
+  timescaledb-data:
+    name: oilgas-timescaledb-data
+  minio-data:
+    name: oilgas-minio-data
+  grafana-data:
+    name: oilgas-grafana-data
+  prometheus-data:
+    name: oilgas-prometheus-data
+  mosquitto-data:
+    name: oilgas-mosquitto-data
+  mosquitto-log:
+    name: oilgas-mosquitto-log

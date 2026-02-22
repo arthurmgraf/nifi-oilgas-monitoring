@@ -1,0 +1,109 @@
+{
+  "controllerServices": [
+    {
+      "name": "ConfluentSchemaRegistry",
+      "type": "org.apache.nifi.confluent.schemaregistry.ConfluentSchemaRegistry",
+      "description": "Confluent Schema Registry for Avro schema resolution and evolution",
+      "properties": {
+        "url": "#{schema.registry.url}",
+        "cache-size": "1000",
+        "cache-expiration": "1 hour"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "AvroReader",
+      "type": "org.apache.nifi.avro.AvroReader",
+      "description": "Reads Avro-encoded FlowFile content using schemas from the Confluent Schema Registry",
+      "properties": {
+        "schema-access-strategy": "confluent-encoded",
+        "schema-registry": "ConfluentSchemaRegistry"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "AvroRecordSetWriter",
+      "type": "org.apache.nifi.avro.AvroRecordSetWriter",
+      "description": "Writes records in Avro format with schema registration to the Confluent Schema Registry",
+      "properties": {
+        "schema-access-strategy": "inherit-record-schema",
+        "schema-registry": "ConfluentSchemaRegistry",
+        "schema-write-strategy": "confluent-encoded"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "JsonTreeReader",
+      "type": "org.apache.nifi.json.JsonTreeReader",
+      "description": "Reads JSON content into NiFi records for processing and transformation",
+      "properties": {
+        "schema-access-strategy": "infer-schema",
+        "starting-field-strategy": "ROOT_NODE"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "JsonRecordSetWriter",
+      "type": "org.apache.nifi.json.JsonRecordSetWriter",
+      "description": "Writes NiFi records as JSON for downstream consumers",
+      "properties": {
+        "schema-access-strategy": "inherit-record-schema",
+        "output-grouping": "output-oneline",
+        "Pretty Print JSON": "false",
+        "Suppress Null Values": "never-suppress"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "PostgreSQL-RefData-DBCP",
+      "type": "org.apache.nifi.dbcp.DBCPConnectionPool",
+      "description": "Connection pool for PostgreSQL reference data (platforms, equipment, sensors, thresholds)",
+      "properties": {
+        "Database Connection URL": "#{postgresql.connection.url}",
+        "Database Driver Class Name": "#{postgresql.driver.class}",
+        "database-driver-locations": "/opt/nifi/nifi-current/lib/postgresql-42.7.4.jar",
+        "Database User": "#{postgresql.username}",
+        "Password": "#{postgresql.password}",
+        "Max Wait Time": "10 seconds",
+        "Max Total Connections": "10",
+        "Min Idle Connections": "2",
+        "Max Idle Connections": "5",
+        "Max Connection Lifetime": "30 minutes",
+        "Validation query": "SELECT 1"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "TimescaleDB-SensorData-DBCP",
+      "type": "org.apache.nifi.dbcp.DBCPConnectionPool",
+      "description": "Connection pool for TimescaleDB sensor time-series data (hypertables)",
+      "properties": {
+        "Database Connection URL": "#{timescaledb.connection.url}",
+        "Database Driver Class Name": "org.postgresql.Driver",
+        "database-driver-locations": "/opt/nifi/nifi-current/lib/postgresql-42.7.4.jar",
+        "Database User": "#{timescaledb.username}",
+        "Password": "#{timescaledb.password}",
+        "Max Wait Time": "10 seconds",
+        "Max Total Connections": "20",
+        "Min Idle Connections": "5",
+        "Max Idle Connections": "10",
+        "Max Connection Lifetime": "30 minutes",
+        "Validation query": "SELECT 1"
+      },
+      "state": "ENABLED"
+    },
+    {
+      "name": "KafkaConnectionService",
+      "type": "org.apache.nifi.kafka.service.Kafka3ConnectionService",
+      "description": "Kafka 3.x connection service for producing and consuming sensor data topics",
+      "properties": {
+        "bootstrap.servers": "#{kafka.bootstrap.servers}",
+        "security.protocol": "#{kafka.security.protocol}",
+        "sasl.mechanism": "#{kafka.sasl.mechanism}",
+        "sasl.username": "#{kafka.sasl.username}",
+        "sasl.password": "#{kafka.sasl.password}"
+      },
+      "state": "ENABLED"
+    }
+  ]
+}

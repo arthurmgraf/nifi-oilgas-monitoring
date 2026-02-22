@@ -1,0 +1,39 @@
+apiVersion: 1
+
+datasources:
+  - name: TimescaleDB
+    type: postgres
+    access: proxy
+    url: timescaledb:5433
+    database: sensordb
+    user: grafana_reader
+    secureJsonData:
+      password: grafana_readonly_pass
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+      timescaledb: true
+    isDefault: true
+
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: refdata
+    user: grafana_reader
+    secureJsonData:
+      password: grafana_readonly_pass
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 5
+      postgresVersion: 1600
+
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      timeInterval: 15s

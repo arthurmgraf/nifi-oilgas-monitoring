@@ -1,0 +1,80 @@
+{
+  "type": "record",
+  "name": "AnomalyAlert",
+  "namespace": "com.oilgas.monitoring.alerts",
+  "doc": "Alert generated when anomaly is detected in sensor readings",
+  "fields": [
+    {
+      "name": "alert_id",
+      "type": "string",
+      "doc": "Unique alert UUID"
+    },
+    {
+      "name": "sensor_id",
+      "type": "string",
+      "doc": "Sensor that triggered the alert"
+    },
+    {
+      "name": "platform_id",
+      "type": "string",
+      "doc": "Platform where alert originated"
+    },
+    {
+      "name": "anomaly_type",
+      "type": {
+        "type": "enum",
+        "name": "AnomalyType",
+        "symbols": [
+          "threshold_exceeded",
+          "threshold_warning",
+          "moving_average_deviation",
+          "rate_of_change_spike",
+          "multi_sensor_correlation"
+        ]
+      },
+      "doc": "Type of anomaly detected"
+    },
+    {
+      "name": "severity",
+      "type": {
+        "type": "enum",
+        "name": "AlertSeverity",
+        "symbols": ["INFO", "WARNING", "CRITICAL"]
+      },
+      "doc": "Alert severity level"
+    },
+    {
+      "name": "actual_value",
+      "type": "double",
+      "doc": "Sensor value that triggered the alert"
+    },
+    {
+      "name": "threshold_value",
+      "type": "double",
+      "doc": "Threshold that was exceeded"
+    },
+    {
+      "name": "sensor_type",
+      "type": "string"
+    },
+    {
+      "name": "unit",
+      "type": "string"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "doc": "Human-readable alert description"
+    },
+    {
+      "name": "detected_at",
+      "type": {"type": "long", "logicalType": "timestamp-millis"},
+      "doc": "When the anomaly was detected"
+    },
+    {
+      "name": "reading_id",
+      "type": "string",
+      "doc": "ID of the reading that triggered this alert"
+    }
+  ]
+}

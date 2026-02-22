@@ -1,0 +1,51 @@
+{
+  "type": "record",
+  "name": "ComplianceEmission",
+  "namespace": "com.oilgas.monitoring.compliance",
+  "doc": "Environmental compliance emission measurement",
+  "fields": [
+    {
+      "name": "measurement_id",
+      "type": "string",
+      "doc": "Unique measurement UUID"
+    },
+    {
+      "name": "platform_id",
+      "type": "string"
+    },
+    {
+      "name": "emission_type",
+      "type": {
+        "type": "enum",
+        "name": "EmissionType",
+        "symbols": ["CO2", "NOx", "SOx", "CH4", "VOC", "PM"]
+      },
+      "doc": "Type of emission measured"
+    },
+    {
+      "name": "value_ppm",
+      "type": "double",
+      "doc": "Emission value in parts per million"
+    },
+    {
+      "name": "limit_ppm",
+      "type": "double",
+      "doc": "Regulatory limit in parts per million"
+    },
+    {
+      "name": "compliant",
+      "type": "boolean",
+      "doc": "Whether reading is within regulatory limits"
+    },
+    {
+      "name": "measured_at",
+      "type": {"type": "long", "logicalType": "timestamp-millis"},
+      "doc": "Measurement timestamp"
+    },
+    {
+      "name": "reporting_period",
+      "type": "string",
+      "doc": "Reporting period (e.g., 2026-Q1)"
+    }
+  ]
+}

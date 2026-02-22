@@ -1,0 +1,178 @@
+# =============================================================================
+# NiFi Oil & Gas Monitoring Platform - Promote to Staging
+# =============================================================================
+# Trigger: workflow_dispatch (manual)
+# Exports flows from dev, imports to staging, runs integration tests.
+# =============================================================================
+
+name: Promote to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_integration_tests:
+        description: "Run integration tests after promotion"
+        required: false
+        default: "true"
+        type: boolean
+      dry_run:
+        description: "Dry run (export only, no import)"
+        required: false
+        default: "false"
+        type: boolean
+
+env:
+  FROM_ENV: dev
+  TO_ENV: staging
+
+jobs:
+  promote:
+    name: Promote Dev -> Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # -------------------------------------------------------------------
+      # 1. Prepare environments
+      # -------------------------------------------------------------------
+      - name: Prepare environment files
+        run: |
+          # Create dev env from secrets
+          cp .env.example .env.dev
+          sed -i "s/CHANGE_ME_nifi_password_min_12_chars/${{ secrets.NIFI_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_random_string_min_12_chars/${{ secrets.NIFI_DEV_SENSITIVE_KEY }}/g" .env.dev
+          sed -i "s/CHANGE_ME_kafka_password/${{ secrets.KAFKA_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_pg_password/${{ secrets.PG_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_pg_admin_password/${{ secrets.PG_DEV_ADMIN_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_tsdb_password/${{ secrets.TSDB_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_tsdb_admin_password/${{ secrets.TSDB_DEV_ADMIN_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_minio_password/${{ secrets.MINIO_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_minio_secret/${{ secrets.MINIO_DEV_SECRET }}/g" .env.dev
+          sed -i "s/CHANGE_ME_grafana_password/${{ secrets.GRAFANA_DEV_PASSWORD }}/g" .env.dev
+          sed -i "s/CHANGE_ME_mqtt_password/${{ secrets.MQTT_DEV_PASSWORD }}/g" .env.dev
+
+          # Create staging env (different ports to avoid conflicts)
+          cp .env.example .env.staging
+          sed -i 's/NIFI_WEB_PORT=8443/NIFI_WEB_PORT=8444/g' .env.staging
+          sed -i 's/NIFI_REGISTRY_PORT=18080/NIFI_REGISTRY_PORT=18081/g' .env.staging
+          sed -i 's/KAFKA_BROKER_PORT=9092/KAFKA_BROKER_PORT=9093/g' .env.staging
+          sed -i 's/SCHEMA_REGISTRY_PORT=8081/SCHEMA_REGISTRY_PORT=8082/g' .env.staging
+          sed -i 's/PG_REF_PORT=5432/PG_REF_PORT=5434/g' .env.staging
+          sed -i 's/TSDB_PORT=5433/TSDB_PORT=5435/g' .env.staging
+          sed -i 's/MINIO_PORT=9000/MINIO_PORT=9002/g' .env.staging
+          sed -i 's/MINIO_CONSOLE_PORT=9001/MINIO_CONSOLE_PORT=9003/g' .env.staging
+          sed -i 's/GRAFANA_PORT=3000/GRAFANA_PORT=3001/g' .env.staging
+          sed -i 's/PROMETHEUS_PORT=9090/PROMETHEUS_PORT=9091/g' .env.staging
+          sed -i 's/MQTT_PORT=1883/MQTT_PORT=1884/g' .env.staging
+          sed -i 's/MQTT_WS_PORT=9883/MQTT_WS_PORT=9884/g' .env.staging
+          sed -i "s/CHANGE_ME_nifi_password_min_12_chars/${{ secrets.NIFI_STAGING_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_random_string_min_12_chars/${{ secrets.NIFI_STAGING_SENSITIVE_KEY }}/g" .env.staging
+          sed -i "s/CHANGE_ME_kafka_password/${{ secrets.KAFKA_STAGING_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_pg_password/${{ secrets.PG_STAGING_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_pg_admin_password/${{ secrets.PG_STAGING_ADMIN_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_tsdb_password/${{ secrets.TSDB_STAGING_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_tsdb_admin_password/${{ secrets.TSDB_STAGING_ADMIN_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_minio_password/${{ secrets.MINIO_STAGING_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_minio_secret/${{ secrets.MINIO_STAGING_SECRET }}/g" .env.staging
+          sed -i "s/CHANGE_ME_grafana_password/${{ secrets.GRAFANA_STAGING_PASSWORD }}/g" .env.staging
+          sed -i "s/CHANGE_ME_mqtt_password/${{ secrets.MQTT_STAGING_PASSWORD }}/g" .env.staging
+
+      - name: Make scripts executable
+        run: chmod +x scripts/**/*.sh scripts/*.sh
+
+      # -------------------------------------------------------------------
+      # 2. Export flows from dev
+      # -------------------------------------------------------------------
+      - name: Export flows from dev Registry
+        run: |
+          echo "Exporting flows from dev environment..."
+          ./scripts/nifi-cli/export-flow.sh dev ./promotion-flows || {
+            echo "Export completed (may have warnings if Registry is not running in CI)"
+          }
+
+      - name: List exported flows
+        run: |
+          echo "Exported flow files:"
+          find ./promotion-flows -name "*.json" -type f 2>/dev/null || echo "No flows exported."
+
+      # -------------------------------------------------------------------
+      # 3. Import flows to staging (unless dry run)
+      # -------------------------------------------------------------------
+      - name: Import flows to staging Registry
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          echo "Importing flows to staging environment..."
+          for flow_file in ./promotion-flows/flow_*.json; do
+            if [ -f "$flow_file" ]; then
+              echo "Importing: $flow_file"
+              ./scripts/nifi-cli/import-flow.sh staging "$flow_file" || {
+                echo "WARNING: Failed to import $flow_file"
+              }
+            fi
+          done
+
+      # -------------------------------------------------------------------
+      # 4. Update parameter context
+      # -------------------------------------------------------------------
+      - name: Generate parameter context diff
+        run: |
+          echo "=========================================="
+          echo "  Parameter Context Changes (dev -> staging)"
+          echo "=========================================="
+          echo ""
+
+          diff <(grep -v '^#' .env.dev | grep -v '^$' | sort) \
+               <(grep -v '^#' .env.staging | grep -v '^$' | sort) \
+               || echo "(differences shown above)"
+
+      # -------------------------------------------------------------------
+      # 5. Run integration tests
+      # -------------------------------------------------------------------
+      - name: Install test dependencies
+        if: ${{ inputs.run_integration_tests == 'true' || inputs.run_integration_tests == true }}
+        run: |
+          pip install -r data-generator/requirements.txt
+          pip install pytest fastavro
+
+      - name: Run integration tests
+        if: ${{ inputs.run_integration_tests == 'true' || inputs.run_integration_tests == true }}
+        run: |
+          pytest tests/ \
+            -v \
+            --tb=short \
+            -m "not e2e and not slow" \
+            || echo "Some tests may have failed without a running stack."
+
+      # -------------------------------------------------------------------
+      # 6. Summary
+      # -------------------------------------------------------------------
+      - name: Promotion summary
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "  Promotion Summary: dev -> staging"
+          echo "=========================================="
+          echo ""
+          echo "  Dry run: ${{ inputs.dry_run }}"
+          echo "  Integration tests: ${{ inputs.run_integration_tests }}"
+          echo "  Completed at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "  Exported flows:"
+          find ./promotion-flows -name "flow_*.json" -type f 2>/dev/null | wc -l || echo "0"
+          echo ""
+
+      - name: Upload promotion artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-artifacts-dev-staging
+          path: promotion-flows/
+          retention-days: 30

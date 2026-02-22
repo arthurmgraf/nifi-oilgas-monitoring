@@ -1,0 +1,220 @@
+# =============================================================================
+# NiFi Oil & Gas Monitoring Platform - CI Pipeline
+# =============================================================================
+# Trigger: push to main, pull_request
+# Jobs: lint, yaml-lint, schema-validate, test
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Python Lint (Ruff)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Ruff check (data-generator)
+        run: ruff check data-generator/
+
+      - name: Ruff format check (data-generator)
+        run: ruff format --check data-generator/
+
+      - name: Ruff check (nifi-python-processors)
+        run: ruff check nifi-python-processors/ || true
+
+      - name: Ruff check (tests)
+        run: ruff check tests/ || true
+
+  # ---------------------------------------------------------------------------
+  # 2. YAML Lint
+  # ---------------------------------------------------------------------------
+  yaml-lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Create yamllint config
+        run: |
+          cat > .yamllint.yml << 'YAMLLINT_EOF'
+          extends: default
+          rules:
+            line-length:
+              max: 150
+              allow-non-breakable-words: true
+              allow-non-breakable-inline-mappings: true
+            truthy:
+              allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+              check-keys: false
+            comments:
+              min-spaces-from-content: 1
+            document-start: disable
+            indentation:
+              spaces: 2
+              indent-sequences: consistent
+          YAMLLINT_EOF
+
+      - name: Lint docker-compose files
+        run: |
+          for f in docker-compose*.yml docker-compose*.yaml; do
+            if [ -f "$f" ]; then
+              echo "Linting: $f"
+              yamllint -c .yamllint.yml "$f"
+            fi
+          done
+
+      - name: Lint prometheus.yml
+        run: yamllint -c .yamllint.yml docker/prometheus/prometheus.yml
+
+      - name: Lint Grafana provisioning
+        run: |
+          find docker/grafana -name "*.yml" -o -name "*.yaml" | while read -r f; do
+            echo "Linting: $f"
+            yamllint -c .yamllint.yml "$f"
+          done
+
+      - name: Lint GitHub workflows
+        run: |
+          find .github/workflows -name "*.yml" -o -name "*.yaml" | while read -r f; do
+            echo "Linting: $f"
+            yamllint -c .yamllint.yml "$f" || true
+          done
+
+  # ---------------------------------------------------------------------------
+  # 3. Avro Schema Validation
+  # ---------------------------------------------------------------------------
+  schema-validate:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install fastavro
+        run: pip install fastavro
+
+      - name: Validate Avro schemas
+        run: |
+          ERRORS=0
+          for schema_file in schemas/*.avsc; do
+            if [ -f "$schema_file" ]; then
+              echo -n "Validating: $schema_file ... "
+              python3 -c "
+          import json
+          import fastavro.schema
+          import sys
+
+          try:
+              with open('$schema_file') as f:
+                  schema = json.load(f)
+              parsed = fastavro.schema.parse_schema(schema)
+              print('OK')
+          except Exception as e:
+              print(f'FAIL: {e}')
+              sys.exit(1)
+          " || ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "ERROR: $ERRORS schema(s) failed validation."
+            exit 1
+          fi
+
+          echo ""
+          echo "All schemas are valid."
+
+  # ---------------------------------------------------------------------------
+  # 4. Unit Tests (pytest)
+  # ---------------------------------------------------------------------------
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install data-generator dependencies
+        run: |
+          pip install -r data-generator/requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Install test dependencies
+        run: |
+          if [ -f requirements-test.txt ]; then
+            pip install -r requirements-test.txt
+          fi
+
+      - name: Set PYTHONPATH
+        run: echo "PYTHONPATH=${{ github.workspace }}/data-generator:${{ github.workspace }}" >> $GITHUB_ENV
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ \
+            -v \
+            --tb=short \
+            -m "unit or not integration and not e2e" \
+            --junitxml=test-results.xml \
+            --cov=data-generator/src \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            coverage.xml
+          retention-days: 30

@@ -1,0 +1,36 @@
+{
+  "type": "record",
+  "name": "SensorValidated",
+  "namespace": "com.oilgas.monitoring.sensor",
+  "doc": "Sensor reading after schema and range validation",
+  "fields": [
+    {"name": "reading_id", "type": "string"},
+    {"name": "platform_id", "type": "string"},
+    {"name": "sensor_id", "type": "string"},
+    {"name": "sensor_type", "type": "string"},
+    {"name": "value", "type": "double"},
+    {"name": "unit", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "quality_flag", "type": "string", "default": "GOOD"},
+    {
+      "name": "validation_status",
+      "type": {
+        "type": "enum",
+        "name": "ValidationStatus",
+        "symbols": ["PASSED", "WARNING", "FAILED"]
+      },
+      "doc": "Result of validation checks"
+    },
+    {
+      "name": "validated_at",
+      "type": {"type": "long", "logicalType": "timestamp-millis"},
+      "doc": "Timestamp when validation occurred"
+    },
+    {
+      "name": "schema_version",
+      "type": "int",
+      "default": 1,
+      "doc": "Schema version used for validation"
+    }
+  ]
+}

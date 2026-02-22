@@ -1,0 +1,724 @@
+{
+  "parameterContexts": [
+    {
+      "name": "dev-params",
+      "description": "Development environment parameters for local Docker Compose stack",
+      "parameters": [
+        {
+          "name": "mqtt.broker.uri",
+          "description": "MQTT broker connection URI (Mosquitto)",
+          "value": "tcp://mosquitto:1883",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.broker.username",
+          "description": "MQTT broker username",
+          "value": "nifi",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.broker.password",
+          "description": "MQTT broker password",
+          "value": "CHANGE_ME_MQTT_PASSWORD",
+          "sensitive": true
+        },
+        {
+          "name": "kafka.bootstrap.servers",
+          "description": "Kafka broker bootstrap servers",
+          "value": "kafka:29092",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.security.protocol",
+          "description": "Kafka security protocol",
+          "value": "PLAINTEXT",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.mechanism",
+          "description": "Kafka SASL mechanism (PLAIN for dev, SCRAM-SHA-512 for prod)",
+          "value": "PLAIN",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.username",
+          "description": "Kafka SASL username",
+          "value": "nifi",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.password",
+          "description": "Kafka SASL password",
+          "value": "CHANGE_ME_KAFKA_PASSWORD",
+          "sensitive": true
+        },
+        {
+          "name": "schema.registry.url",
+          "description": "Confluent Schema Registry URL",
+          "value": "http://schema-registry:8081",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.host",
+          "description": "PostgreSQL reference data host",
+          "value": "postgres",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.port",
+          "description": "PostgreSQL reference data port",
+          "value": "5432",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.database",
+          "description": "PostgreSQL reference data database name",
+          "value": "refdata",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.username",
+          "description": "PostgreSQL connection username",
+          "value": "nifi",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.password",
+          "description": "PostgreSQL connection password",
+          "value": "CHANGE_ME_PG_PASSWORD",
+          "sensitive": true
+        },
+        {
+          "name": "postgresql.driver.class",
+          "description": "PostgreSQL JDBC driver class name",
+          "value": "org.postgresql.Driver",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.connection.url",
+          "description": "PostgreSQL JDBC connection URL",
+          "value": "jdbc:postgresql://postgres:5432/refdata",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.host",
+          "description": "TimescaleDB sensor data host",
+          "value": "timescaledb",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.port",
+          "description": "TimescaleDB sensor data port",
+          "value": "5433",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.database",
+          "description": "TimescaleDB sensor data database name",
+          "value": "sensordb",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.username",
+          "description": "TimescaleDB connection username",
+          "value": "nifi",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.password",
+          "description": "TimescaleDB connection password",
+          "value": "CHANGE_ME_TSDB_PASSWORD",
+          "sensitive": true
+        },
+        {
+          "name": "timescaledb.connection.url",
+          "description": "TimescaleDB JDBC connection URL",
+          "value": "jdbc:postgresql://timescaledb:5433/sensordb",
+          "sensitive": false
+        },
+        {
+          "name": "minio.endpoint.url",
+          "description": "MinIO S3-compatible endpoint URL",
+          "value": "http://minio:9000",
+          "sensitive": false
+        },
+        {
+          "name": "minio.access.key",
+          "description": "MinIO access key",
+          "value": "minioadmin",
+          "sensitive": false
+        },
+        {
+          "name": "minio.secret.key",
+          "description": "MinIO secret key",
+          "value": "CHANGE_ME_MINIO_SECRET",
+          "sensitive": true
+        },
+        {
+          "name": "threshold.critical.high",
+          "description": "Default critical high threshold for anomaly detection",
+          "value": "120.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.warning.high",
+          "description": "Default warning high threshold for anomaly detection",
+          "value": "100.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.critical.low",
+          "description": "Default critical low threshold for anomaly detection",
+          "value": "5.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.warning.low",
+          "description": "Default warning low threshold for anomaly detection",
+          "value": "10.0",
+          "sensitive": false
+        },
+        {
+          "name": "moving.average.window.size",
+          "description": "Moving average window size (number of readings)",
+          "value": "50",
+          "sensitive": false
+        },
+        {
+          "name": "moving.average.deviation.threshold",
+          "description": "Standard deviation threshold for moving average anomaly detection",
+          "value": "3.0",
+          "sensitive": false
+        },
+        {
+          "name": "rate.of.change.max",
+          "description": "Maximum allowed rate of change (units/second)",
+          "value": "10.0",
+          "sensitive": false
+        },
+        {
+          "name": "rate.of.change.time.window",
+          "description": "Time window in seconds for rate of change calculation",
+          "value": "60",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.raw",
+          "description": "Kafka topic for raw sensor readings",
+          "value": "sensor-readings-raw",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.validated",
+          "description": "Kafka topic for validated sensor readings",
+          "value": "sensor-readings-validated",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.enriched",
+          "description": "Kafka topic for enriched sensor readings",
+          "value": "sensor-readings-enriched",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.anomalies",
+          "description": "Kafka topic for detected anomalies",
+          "value": "anomaly-alerts",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.compliance",
+          "description": "Kafka topic for compliance/emission events",
+          "value": "compliance-events",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.topic.sensors",
+          "description": "MQTT topic pattern for sensor readings",
+          "value": "platforms/+/sensors/+/readings",
+          "sensitive": false
+        }
+      ]
+    },
+    {
+      "name": "staging-params",
+      "description": "Staging environment parameters for pre-production validation",
+      "parameters": [
+        {
+          "name": "mqtt.broker.uri",
+          "description": "MQTT broker connection URI",
+          "value": "tcp://mqtt-staging.internal:1883",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.broker.username",
+          "description": "MQTT broker username",
+          "value": "nifi_staging",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.broker.password",
+          "description": "MQTT broker password",
+          "value": "CHANGE_ME_STAGING_MQTT",
+          "sensitive": true
+        },
+        {
+          "name": "kafka.bootstrap.servers",
+          "description": "Kafka broker bootstrap servers",
+          "value": "kafka-staging-01:9092,kafka-staging-02:9092,kafka-staging-03:9092",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.security.protocol",
+          "description": "Kafka security protocol",
+          "value": "SASL_SSL",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.mechanism",
+          "description": "Kafka SASL mechanism",
+          "value": "SCRAM-SHA-512",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.username",
+          "description": "Kafka SASL username",
+          "value": "nifi_staging",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.password",
+          "description": "Kafka SASL password",
+          "value": "CHANGE_ME_STAGING_KAFKA",
+          "sensitive": true
+        },
+        {
+          "name": "schema.registry.url",
+          "description": "Confluent Schema Registry URL",
+          "value": "http://schema-registry-staging.internal:8081",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.host",
+          "description": "PostgreSQL reference data host",
+          "value": "pg-staging.internal",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.port",
+          "description": "PostgreSQL reference data port",
+          "value": "5432",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.database",
+          "description": "PostgreSQL reference data database name",
+          "value": "refdata",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.username",
+          "description": "PostgreSQL connection username",
+          "value": "nifi_staging",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.password",
+          "description": "PostgreSQL connection password",
+          "value": "CHANGE_ME_STAGING_PG",
+          "sensitive": true
+        },
+        {
+          "name": "postgresql.driver.class",
+          "description": "PostgreSQL JDBC driver class name",
+          "value": "org.postgresql.Driver",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.connection.url",
+          "description": "PostgreSQL JDBC connection URL",
+          "value": "jdbc:postgresql://pg-staging.internal:5432/refdata",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.host",
+          "description": "TimescaleDB sensor data host",
+          "value": "tsdb-staging.internal",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.port",
+          "description": "TimescaleDB sensor data port",
+          "value": "5432",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.database",
+          "description": "TimescaleDB sensor data database name",
+          "value": "sensordb",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.username",
+          "description": "TimescaleDB connection username",
+          "value": "nifi_staging",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.password",
+          "description": "TimescaleDB connection password",
+          "value": "CHANGE_ME_STAGING_TSDB",
+          "sensitive": true
+        },
+        {
+          "name": "timescaledb.connection.url",
+          "description": "TimescaleDB JDBC connection URL",
+          "value": "jdbc:postgresql://tsdb-staging.internal:5432/sensordb",
+          "sensitive": false
+        },
+        {
+          "name": "minio.endpoint.url",
+          "description": "MinIO/S3-compatible endpoint URL",
+          "value": "http://minio-staging.internal:9000",
+          "sensitive": false
+        },
+        {
+          "name": "minio.access.key",
+          "description": "MinIO/S3 access key",
+          "value": "CHANGE_ME_STAGING_MINIO_KEY",
+          "sensitive": false
+        },
+        {
+          "name": "minio.secret.key",
+          "description": "MinIO/S3 secret key",
+          "value": "CHANGE_ME_STAGING_MINIO_SECRET",
+          "sensitive": true
+        },
+        {
+          "name": "threshold.critical.high",
+          "description": "Default critical high threshold for anomaly detection",
+          "value": "120.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.warning.high",
+          "description": "Default warning high threshold for anomaly detection",
+          "value": "100.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.critical.low",
+          "description": "Default critical low threshold for anomaly detection",
+          "value": "5.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.warning.low",
+          "description": "Default warning low threshold for anomaly detection",
+          "value": "10.0",
+          "sensitive": false
+        },
+        {
+          "name": "moving.average.window.size",
+          "description": "Moving average window size (number of readings)",
+          "value": "100",
+          "sensitive": false
+        },
+        {
+          "name": "moving.average.deviation.threshold",
+          "description": "Standard deviation threshold for moving average anomaly detection",
+          "value": "3.0",
+          "sensitive": false
+        },
+        {
+          "name": "rate.of.change.max",
+          "description": "Maximum allowed rate of change (units/second)",
+          "value": "10.0",
+          "sensitive": false
+        },
+        {
+          "name": "rate.of.change.time.window",
+          "description": "Time window in seconds for rate of change calculation",
+          "value": "60",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.raw",
+          "description": "Kafka topic for raw sensor readings",
+          "value": "sensor-readings-raw",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.validated",
+          "description": "Kafka topic for validated sensor readings",
+          "value": "sensor-readings-validated",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.enriched",
+          "description": "Kafka topic for enriched sensor readings",
+          "value": "sensor-readings-enriched",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.anomalies",
+          "description": "Kafka topic for detected anomalies",
+          "value": "anomaly-alerts",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.compliance",
+          "description": "Kafka topic for compliance/emission events",
+          "value": "compliance-events",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.topic.sensors",
+          "description": "MQTT topic pattern for sensor readings",
+          "value": "platforms/+/sensors/+/readings",
+          "sensitive": false
+        }
+      ]
+    },
+    {
+      "name": "prod-params",
+      "description": "Production environment parameters for live Oil & Gas monitoring",
+      "parameters": [
+        {
+          "name": "mqtt.broker.uri",
+          "description": "MQTT broker connection URI",
+          "value": "ssl://mqtt-prod.oilgas.internal:8883",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.broker.username",
+          "description": "MQTT broker username",
+          "value": "nifi_prod",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.broker.password",
+          "description": "MQTT broker password",
+          "value": "CHANGE_ME_PROD_MQTT",
+          "sensitive": true
+        },
+        {
+          "name": "kafka.bootstrap.servers",
+          "description": "Kafka broker bootstrap servers",
+          "value": "kafka-prod-01:9092,kafka-prod-02:9092,kafka-prod-03:9092",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.security.protocol",
+          "description": "Kafka security protocol",
+          "value": "SASL_SSL",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.mechanism",
+          "description": "Kafka SASL mechanism",
+          "value": "SCRAM-SHA-512",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.username",
+          "description": "Kafka SASL username",
+          "value": "nifi_prod",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.sasl.password",
+          "description": "Kafka SASL password",
+          "value": "CHANGE_ME_PROD_KAFKA",
+          "sensitive": true
+        },
+        {
+          "name": "schema.registry.url",
+          "description": "Confluent Schema Registry URL",
+          "value": "http://schema-registry-prod.oilgas.internal:8081",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.host",
+          "description": "PostgreSQL reference data host",
+          "value": "pg-prod.oilgas.internal",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.port",
+          "description": "PostgreSQL reference data port",
+          "value": "5432",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.database",
+          "description": "PostgreSQL reference data database name",
+          "value": "refdata",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.username",
+          "description": "PostgreSQL connection username",
+          "value": "nifi_prod",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.password",
+          "description": "PostgreSQL connection password",
+          "value": "CHANGE_ME_PROD_PG",
+          "sensitive": true
+        },
+        {
+          "name": "postgresql.driver.class",
+          "description": "PostgreSQL JDBC driver class name",
+          "value": "org.postgresql.Driver",
+          "sensitive": false
+        },
+        {
+          "name": "postgresql.connection.url",
+          "description": "PostgreSQL JDBC connection URL",
+          "value": "jdbc:postgresql://pg-prod.oilgas.internal:5432/refdata",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.host",
+          "description": "TimescaleDB sensor data host",
+          "value": "tsdb-prod.oilgas.internal",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.port",
+          "description": "TimescaleDB sensor data port",
+          "value": "5432",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.database",
+          "description": "TimescaleDB sensor data database name",
+          "value": "sensordb",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.username",
+          "description": "TimescaleDB connection username",
+          "value": "nifi_prod",
+          "sensitive": false
+        },
+        {
+          "name": "timescaledb.password",
+          "description": "TimescaleDB connection password",
+          "value": "CHANGE_ME_PROD_TSDB",
+          "sensitive": true
+        },
+        {
+          "name": "timescaledb.connection.url",
+          "description": "TimescaleDB JDBC connection URL",
+          "value": "jdbc:postgresql://tsdb-prod.oilgas.internal:5432/sensordb",
+          "sensitive": false
+        },
+        {
+          "name": "minio.endpoint.url",
+          "description": "S3-compatible endpoint URL (production object storage)",
+          "value": "https://s3-prod.oilgas.internal:9000",
+          "sensitive": false
+        },
+        {
+          "name": "minio.access.key",
+          "description": "S3 access key",
+          "value": "CHANGE_ME_PROD_S3_KEY",
+          "sensitive": false
+        },
+        {
+          "name": "minio.secret.key",
+          "description": "S3 secret key",
+          "value": "CHANGE_ME_PROD_S3_SECRET",
+          "sensitive": true
+        },
+        {
+          "name": "threshold.critical.high",
+          "description": "Default critical high threshold for anomaly detection",
+          "value": "120.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.warning.high",
+          "description": "Default warning high threshold for anomaly detection",
+          "value": "100.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.critical.low",
+          "description": "Default critical low threshold for anomaly detection",
+          "value": "5.0",
+          "sensitive": false
+        },
+        {
+          "name": "threshold.warning.low",
+          "description": "Default warning low threshold for anomaly detection",
+          "value": "10.0",
+          "sensitive": false
+        },
+        {
+          "name": "moving.average.window.size",
+          "description": "Moving average window size (number of readings)",
+          "value": "200",
+          "sensitive": false
+        },
+        {
+          "name": "moving.average.deviation.threshold",
+          "description": "Standard deviation threshold for moving average anomaly detection",
+          "value": "3.5",
+          "sensitive": false
+        },
+        {
+          "name": "rate.of.change.max",
+          "description": "Maximum allowed rate of change (units/second)",
+          "value": "10.0",
+          "sensitive": false
+        },
+        {
+          "name": "rate.of.change.time.window",
+          "description": "Time window in seconds for rate of change calculation",
+          "value": "60",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.raw",
+          "description": "Kafka topic for raw sensor readings",
+          "value": "sensor-readings-raw",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.validated",
+          "description": "Kafka topic for validated sensor readings",
+          "value": "sensor-readings-validated",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.enriched",
+          "description": "Kafka topic for enriched sensor readings",
+          "value": "sensor-readings-enriched",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.anomalies",
+          "description": "Kafka topic for detected anomalies",
+          "value": "anomaly-alerts",
+          "sensitive": false
+        },
+        {
+          "name": "kafka.topic.compliance",
+          "description": "Kafka topic for compliance/emission events",
+          "value": "compliance-events",
+          "sensitive": false
+        },
+        {
+          "name": "mqtt.topic.sensors",
+          "description": "MQTT topic pattern for sensor readings",
+          "value": "platforms/+/sensors/+/readings",
+          "sensitive": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "type": "record",
+  "name": "SensorEnriched",
+  "namespace": "com.oilgas.monitoring.sensor",
+  "doc": "Sensor reading enriched with equipment metadata and geolocation",
+  "fields": [
+    {"name": "reading_id", "type": "string"},
+    {"name": "platform_id", "type": "string"},
+    {"name": "sensor_id", "type": "string"},
+    {"name": "sensor_type", "type": "string"},
+    {"name": "value", "type": "double"},
+    {"name": "unit", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "quality_flag", "type": "string", "default": "GOOD"},
+    {"name": "validation_status", "type": "string"},
+    {"name": "validated_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "schema_version", "type": "int", "default": 1},
+    {
+      "name": "equipment_name",
+      "type": "string",
+      "doc": "Name of the equipment this sensor belongs to"
+    },
+    {
+      "name": "equipment_type",
+      "type": "string",
+      "doc": "Type of equipment (pump, compressor, turbine, etc.)"
+    },
+    {
+      "name": "platform_name",
+      "type": "string",
+      "doc": "Full name of the offshore platform"
+    },
+    {
+      "name": "latitude",
+      "type": "double",
+      "doc": "Platform latitude"
+    },
+    {
+      "name": "longitude",
+      "type": "double",
+      "doc": "Platform longitude"
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "doc": "Geographic region"
+    },
+    {
+      "name": "enriched_at",
+      "type": {"type": "long", "logicalType": "timestamp-millis"},
+      "doc": "Timestamp when enrichment occurred"
+    }
+  ]
+}

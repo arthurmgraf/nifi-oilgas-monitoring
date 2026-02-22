@@ -1,0 +1,65 @@
+{
+  "type": "record",
+  "name": "SensorReading",
+  "namespace": "com.oilgas.monitoring.sensor",
+  "doc": "Raw sensor reading from offshore platform equipment",
+  "fields": [
+    {
+      "name": "reading_id",
+      "type": "string",
+      "doc": "Unique reading UUID"
+    },
+    {
+      "name": "platform_id",
+      "type": {
+        "type": "enum",
+        "name": "PlatformCode",
+        "symbols": ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO"]
+      },
+      "doc": "Offshore platform identifier"
+    },
+    {
+      "name": "sensor_id",
+      "type": "string",
+      "doc": "Sensor identifier (e.g., TEMP-001)"
+    },
+    {
+      "name": "sensor_type",
+      "type": {
+        "type": "enum",
+        "name": "SensorType",
+        "symbols": ["temperature", "pressure", "vibration", "flow_rate"]
+      },
+      "doc": "Type of sensor measurement"
+    },
+    {
+      "name": "value",
+      "type": "double",
+      "doc": "Sensor reading value"
+    },
+    {
+      "name": "unit",
+      "type": "string",
+      "doc": "Measurement unit (e.g., celsius, bar, mm_s, m3_h)"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Reading timestamp (epoch milliseconds)"
+    },
+    {
+      "name": "quality_flag",
+      "type": {
+        "type": "enum",
+        "name": "QualityFlag",
+        "symbols": ["GOOD", "UNCERTAIN", "BAD"],
+        "default": "GOOD"
+      },
+      "default": "GOOD",
+      "doc": "Data quality indicator"
+    }
+  ]
+}

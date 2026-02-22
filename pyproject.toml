@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nifi-oilgas-monitoring"
+version = "1.0.0"
+description = "Apache NiFi Oil & Gas Upstream Monitoring Platform"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests (fast, no external deps)",
+    "integration: Integration tests (require Docker stack)",
+    "e2e: End-to-end tests (require full stack running)",
+]
+addopts = "-v --tb=short"
