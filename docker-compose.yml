@@ -34,9 +34,9 @@ services:
       SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?NIFI_PASSWORD is required (min 12 chars)}
       NIFI_SENSITIVE_PROPS_KEY: ${NIFI_SENSITIVE_KEY:?NIFI_SENSITIVE_KEY is required (min 12 chars)}
-      # --- JVM ---
-      NIFI_HEAP_INIT: ${NIFI_HEAP_INIT:-1g}
-      NIFI_HEAP_MAX: ${NIFI_HEAP_MAX:-2g}
+      # --- JVM (NiFi 2.x Docker entrypoint env vars) ---
+      NIFI_JVM_HEAP_INIT: ${NIFI_HEAP_INIT:-1g}
+      NIFI_JVM_HEAP_MAX: ${NIFI_HEAP_MAX:-2g}
       # --- Kafka connectivity ---
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-nifi}
