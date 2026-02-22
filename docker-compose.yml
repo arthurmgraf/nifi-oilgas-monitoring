@@ -77,10 +77,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -kfs https://localhost:8443/nifi-api/system-diagnostics > /dev/null || exit 1"]
-      interval: 30s
-      timeout: 15s
-      start_period: 300s
-      retries: 5
+      interval: 60s
+      timeout: 30s
+      start_period: 600s
+      retries: 10
     networks:
       - oilgas-net
     restart: unless-stopped
