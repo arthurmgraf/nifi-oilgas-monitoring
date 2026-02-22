@@ -21,30 +21,15 @@ services:
       # Lower heap for dev machines
       NIFI_HEAP_INIT: ${NIFI_HEAP_INIT:-512m}
       NIFI_HEAP_MAX: ${NIFI_HEAP_MAX:-1g}
-      # Enable verbose logging for Python processors
-      NIFI_LOG_LEVEL: DEBUG
-      # JMX remote debugging
-      JAVA_TOOL_OPTIONS: >-
-        -Dcom.sun.management.jmxremote
-        -Dcom.sun.management.jmxremote.port=9010
-        -Dcom.sun.management.jmxremote.rmi.port=9010
-        -Dcom.sun.management.jmxremote.local.only=false
-        -Dcom.sun.management.jmxremote.authenticate=false
-        -Dcom.sun.management.jmxremote.ssl=false
-        -Djava.rmi.server.hostname=localhost
+      NIFI_LOG_LEVEL: INFO
     ports:
       - "${NIFI_WEB_PORT:-8443}:8443"
-      # JMX remote access for VisualVM / JConsole
-      - "9010:9010"
-    # Mount NiFi flow definitions for live editing
     volumes:
       - nifi-data:/opt/nifi/nifi-current/flowfile_repository
       - nifi-content:/opt/nifi/nifi-current/content_repository
       - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
       - nifi-state:/opt/nifi/nifi-current/state
-      - ./nifi-python-processors:/opt/nifi/nifi-current/python
       - ./data/import:/data/import
-      - ./nifi-flows:/opt/nifi/nifi-current/conf/flow
 
   # =========================================================================
   # NiFi Registry - Development overrides
