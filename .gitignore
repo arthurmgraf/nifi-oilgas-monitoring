@@ -50,3 +50,6 @@ htmlcov/
 
 # Backups
 backups/
+
+# Credentials file (never commit)
+ACCESS_CREDENTIALS.md
