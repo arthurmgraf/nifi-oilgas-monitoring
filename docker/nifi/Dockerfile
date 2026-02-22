@@ -49,14 +49,22 @@ COPY --chown=nifi:nifi conf/bootstrap.conf /opt/nifi/nifi-current/conf/bootstrap
 COPY --chown=nifi:nifi conf/logback.xml    /opt/nifi/nifi-current/conf/logback.xml
 
 # ---------------------------------------------------------------------------
-# 5. Switch back to NiFi user
+# 5. Disable Python Processors (NiFi 2.8.0 Py4J framework not bundled in image)
+#    The python.command property triggers Controller.py which doesn't ship with
+#    the Docker image. Commenting it out prevents the fatal Py4J startup loop.
+# ---------------------------------------------------------------------------
+RUN sed -i 's/^nifi.python.command=/#nifi.python.command=/' \
+    /opt/nifi/nifi-current/conf/nifi.properties
+
+# ---------------------------------------------------------------------------
+# 6. Switch back to NiFi user
 # ---------------------------------------------------------------------------
 USER nifi
 
 # ---------------------------------------------------------------------------
 # 6. Health check -- NiFi 2.x defaults to HTTPS on 8443
 # ---------------------------------------------------------------------------
-HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
+HEALTHCHECK --interval=30s --timeout=15s --start-period=300s --retries=5 \
     CMD curl -kfs https://localhost:8443/nifi-api/system-diagnostics > /dev/null || exit 1
 
 EXPOSE 8443
