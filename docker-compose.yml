@@ -369,6 +369,32 @@ services:
     restart: unless-stopped
     profiles: ["dev", "staging", "prod"]
 
+
+  # ---------------------------------------------------------------------------
+  # Data Generator - Simulated Oil & Gas Sensor Data
+  # ---------------------------------------------------------------------------
+  data-generator:
+    build:
+      context: ./data-generator
+      dockerfile: Dockerfile
+    container_name: oilgas-data-generator
+    hostname: data-generator
+    restart: unless-stopped
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      INTERVAL_SECONDS: "10"
+      ANOMALY_PROBABILITY: "0.05"
+      PLATFORMS: ALPHA,BRAVO,CHARLIE,DELTA,ECHO
+      NIFI_HTTP_URL: "http://nifi:8080"
+      LOG_LEVEL: INFO
+    depends_on:
+      mosquitto:
+        condition: service_started
+    networks:
+      - oilgas-net
+    profiles: ["dev", "staging", "prod"]
+
 # ---------------------------------------------------------------------------
 # Networks
 # ---------------------------------------------------------------------------
