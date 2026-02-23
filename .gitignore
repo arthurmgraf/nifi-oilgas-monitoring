@@ -57,6 +57,7 @@ nul
 
 # Backups
 backups/
+nifi-flows/bootstrap/flow-backup-*.json
 
-# Credentials file (never commit)
-ACCESS_CREDENTIALS.md
+# Temp debug scripts
+_*.py
