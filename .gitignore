@@ -48,6 +48,13 @@ htmlcov/
 # Logs
 *.log
 
+# Credentials & deployment scripts (contain secrets)
+ACCESS_CREDENTIALS.md
+deploy_remote.py
+
+# Windows artifacts
+nul
+
 # Backups
 backups/
 

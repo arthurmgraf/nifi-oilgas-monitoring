@@ -47,6 +47,9 @@ jobs:
       - name: Ruff check (nifi-python-processors)
         run: ruff check nifi-python-processors/ || true
 
+      - name: Ruff check (nifi-flows/bootstrap)
+        run: ruff check nifi-flows/bootstrap/ || true
+
       - name: Ruff check (tests)
         run: ruff check tests/ || true
 
@@ -116,7 +119,32 @@ jobs:
           done
 
   # ---------------------------------------------------------------------------
-  # 3. Avro Schema Validation
+  # 3. NiFi Bootstrap JSON Validation
+  # ---------------------------------------------------------------------------
+  json-validate:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate NiFi bootstrap JSON files
+        run: |
+          ERRORS=0
+          for f in nifi-flows/bootstrap/*.json; do
+            if [ -f "$f" ]; then
+              echo -n "Validating: $f ... "
+              python3 -c "import json; json.load(open('$f'))" 2>&1 && echo "OK" || { echo "FAIL"; ERRORS=$((ERRORS + 1)); }
+            fi
+          done
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "ERROR: $ERRORS JSON file(s) failed validation."
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 4. Avro Schema Validation
   # ---------------------------------------------------------------------------
   schema-validate:
     name: Schema Validation

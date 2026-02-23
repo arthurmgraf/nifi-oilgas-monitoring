@@ -155,6 +155,30 @@
           "sensitive": true
         },
         {
+          "name": "minio.bucket.data",
+          "description": "MinIO bucket for sensor data archival",
+          "value": "sensor-data",
+          "sensitive": false
+        },
+        {
+          "name": "minio.bucket.dlq",
+          "description": "MinIO bucket for dead letter queue records",
+          "value": "sensor-dlq",
+          "sensitive": false
+        },
+        {
+          "name": "minio.bucket.backups",
+          "description": "MinIO bucket for backup snapshots",
+          "value": "sensor-backups",
+          "sensitive": false
+        },
+        {
+          "name": "minio.region",
+          "description": "S3 region (us-east-1 for MinIO compatibility)",
+          "value": "us-east-1",
+          "sensitive": false
+        },
+        {
           "name": "threshold.critical.high",
           "description": "Default critical high threshold for anomaly detection",
           "value": "120.0",
@@ -395,6 +419,30 @@
           "sensitive": true
         },
         {
+          "name": "minio.bucket.data",
+          "description": "MinIO bucket for sensor data archival",
+          "value": "sensor-data",
+          "sensitive": false
+        },
+        {
+          "name": "minio.bucket.dlq",
+          "description": "MinIO bucket for dead letter queue records",
+          "value": "sensor-dlq",
+          "sensitive": false
+        },
+        {
+          "name": "minio.bucket.backups",
+          "description": "MinIO bucket for backup snapshots",
+          "value": "sensor-backups",
+          "sensitive": false
+        },
+        {
+          "name": "minio.region",
+          "description": "S3 region (us-east-1 for MinIO compatibility)",
+          "value": "us-east-1",
+          "sensitive": false
+        },
+        {
           "name": "threshold.critical.high",
           "description": "Default critical high threshold for anomaly detection",
           "value": "120.0",
@@ -633,6 +681,30 @@
           "description": "S3 secret key",
           "value": "CHANGE_ME_PROD_S3_SECRET",
           "sensitive": true
+        },
+        {
+          "name": "minio.bucket.data",
+          "description": "S3 bucket for sensor data archival",
+          "value": "sensor-data",
+          "sensitive": false
+        },
+        {
+          "name": "minio.bucket.dlq",
+          "description": "S3 bucket for dead letter queue records",
+          "value": "sensor-dlq",
+          "sensitive": false
+        },
+        {
+          "name": "minio.bucket.backups",
+          "description": "S3 bucket for backup snapshots",
+          "value": "sensor-backups",
+          "sensitive": false
+        },
+        {
+          "name": "minio.region",
+          "description": "S3 region",
+          "value": "us-east-1",
+          "sensitive": false
         },
         {
           "name": "threshold.critical.high",

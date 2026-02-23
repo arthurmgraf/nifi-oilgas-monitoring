@@ -74,6 +74,16 @@
       "state": "ENABLED"
     },
     {
+      "name": "MinIO-S3-Credentials",
+      "type": "org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService",
+      "description": "AWS credentials provider for MinIO S3-compatible object storage",
+      "properties": {
+        "Access Key ID": "#{minio.access.key}",
+        "Secret Access Key": "#{minio.secret.key}"
+      },
+      "state": "ENABLED"
+    },
+    {
       "name": "TimescaleDB-SensorData-DBCP",
       "type": "org.apache.nifi.dbcp.DBCPConnectionPool",
       "description": "Connection pool for TimescaleDB sensor time-series data (hypertables)",

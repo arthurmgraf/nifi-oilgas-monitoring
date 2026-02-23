@@ -386,7 +386,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  p.platform_id AS \"Platform ID\",\n  p.name AS \"Platform Name\",\n  p.region AS \"Region\",\n  COUNT(DISTINCT s.sensor_id) AS \"Sensor Count\",\n  COUNT(DISTINCT CASE WHEN ah.resolved = false THEN ah.id END) AS \"Alert Count\",\n  MAX(ah.detected_at) AS \"Latest Alert Time\"\nFROM platforms p\nLEFT JOIN sensors s ON s.platform_id = p.platform_id AND s.status = 'ACTIVE'\nLEFT JOIN alert_history ah ON ah.platform_id = p.platform_id\nWHERE p.status = 'ACTIVE'\nGROUP BY p.platform_id, p.name, p.region\nORDER BY \"Alert Count\" DESC;",
+          "rawSql": "SELECT\n  p.platform_id AS \"Platform ID\",\n  p.platform_name AS \"Platform Name\",\n  p.region AS \"Region\",\n  COUNT(DISTINCT s.sensor_id) AS \"Sensor Count\",\n  COUNT(DISTINCT CASE WHEN ah.resolved = false THEN ah.alert_id END) AS \"Alert Count\",\n  MAX(ah.detected_at) AS \"Latest Alert Time\"\nFROM platforms p\nLEFT JOIN sensors s ON s.platform_id = p.platform_id AND s.status = 'ACTIVE'\nLEFT JOIN alert_history ah ON ah.platform_id = p.platform_id\nWHERE p.status = 'ACTIVE'\nGROUP BY p.platform_id, p.platform_name, p.region\nORDER BY \"Alert Count\" DESC;",
           "refId": "A"
         }
       ],

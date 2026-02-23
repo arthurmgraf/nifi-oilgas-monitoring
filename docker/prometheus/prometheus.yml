@@ -3,27 +3,16 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
+  # NiFi metrics via PrometheusReportingTask (port 9093)
+  # Enable with: python nifi-flows/bootstrap/enable-prometheus-reporting.py
   - job_name: "nifi"
     metrics_path: /metrics
-    scheme: https
-    tls_config:
-      insecure_skip_verify: true
+    scheme: http
+    scrape_interval: 30s
     static_configs:
-      - targets: ["nifi:8443"]
+      - targets: ["nifi:9093"]
         labels:
           instance: "nifi-primary"
-
-  - job_name: "kafka"
-    static_configs:
-      - targets: ["kafka:9101"]
-        labels:
-          instance: "kafka-broker-1"
-
-  - job_name: "timescaledb"
-    static_configs:
-      - targets: ["timescaledb:9187"]
-        labels:
-          instance: "timescaledb"
 
   - job_name: "prometheus"
     static_configs:

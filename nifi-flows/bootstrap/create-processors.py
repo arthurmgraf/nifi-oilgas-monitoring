@@ -250,7 +250,7 @@ def build_pg01_mqtt_ingestion(
         position={"x": 0, "y": 400},
         properties={
             "Broker URI": "#{mqtt.broker.uri}",
-            "Topic Filter": "#{mqtt.topic.pattern}",
+            "Topic Filter": "#{mqtt.topic.sensors}",
             "Quality of Service(QoS)": "1",
             "Max Queue Size": "10000",
         },
@@ -802,8 +802,12 @@ def build_pg06_alert_routing(
 def build_pg07_timescaledb_storage(
     client: NiFiClient, pg_id: str, ports: dict, svc_ids: dict
 ) -> None:
-    """PG-07: TimescaleDB Storage - Write enriched sensor readings to TimescaleDB hypertables."""
-    logger.info("Building PG-07: TimescaleDB Storage")
+    """PG-07: TimescaleDB Storage + MinIO Archival.
+
+    Write enriched sensor readings to TimescaleDB hypertables AND archive
+    to MinIO sensor-data bucket in parallel.
+    """
+    logger.info("Building PG-07: TimescaleDB Storage + MinIO Archival")
 
     input_port_id = ports["input"].get("input")
 
@@ -842,6 +846,28 @@ def build_pg07_timescaledb_storage(
         comments="Inserts enriched sensor readings into TimescaleDB sensor_readings hypertable in batches of 500",
     )
 
+    # PutS3Object: Archive enriched readings to MinIO sensor-data bucket
+    put_s3 = client.create_processor(
+        pg_id=pg_id,
+        name="ArchiveToMinIO",
+        processor_type="org.apache.nifi.processors.aws.s3.PutS3Object",
+        position={"x": -200, "y": 700},
+        properties={
+            "Bucket": "#{minio.bucket.data}",
+            "Object Key": "sensors/${platform_id}/${sensor_type}/"
+                "${now():format('yyyy/MM/dd/HH')}/"
+                "${sensor_id}_${now():format('yyyyMMdd_HHmmssSSS')}_${UUID()}.json",
+            "Region": "#{minio.region}",
+            "Endpoint Override URL": "#{minio.endpoint.url}",
+            "AWS Credentials Provider service": svc_ids.get("MinIO-S3-Credentials", ""),
+            "Signer Override": "AWSS3V4SignerType",
+            "Communications Timeout": "30 secs",
+        },
+        auto_terminated=["success"],
+        comments="Archives enriched sensor readings to MinIO sensor-data bucket, "
+                 "partitioned by platform/sensor_type/date/hour",
+    )
+
     # LogAttribute: Log DB write failures
     log_failure = client.create_processor(
         pg_id=pg_id,
@@ -857,9 +883,26 @@ def build_pg07_timescaledb_storage(
         comments="Logs failed database write operations for debugging",
     )
 
+    # LogAttribute: Log S3 write failures
+    log_s3_failure = client.create_processor(
+        pg_id=pg_id,
+        name="LogS3WriteFailure",
+        processor_type="org.apache.nifi.processors.standard.LogAttribute",
+        position={"x": -200, "y": 1000},
+        properties={
+            "Log Level": "error",
+            "Log Payload": "false",
+            "Attributes to Log": "sensor_id,platform_id,s3.*",
+        },
+        auto_terminated=["success"],
+        comments="Logs failed MinIO/S3 write operations for debugging",
+    )
+
     convert_id = convert["id"]
     put_db_id = put_db["id"]
+    put_s3_id = put_s3["id"]
     log_id = log_failure["id"]
+    log_s3_id = log_s3_failure["id"]
 
     if input_port_id:
         client.create_connection_within_pg(
@@ -867,12 +910,13 @@ def build_pg07_timescaledb_storage(
             source_type="INPUT_PORT",
         )
 
+    # ConvertRecord success fans out to both TimescaleDB AND MinIO (NiFi clones FlowFiles)
     client.create_connection_within_pg(pg_id, convert_id, put_db_id, ["success"])
-    client.create_connection_within_pg(
-        pg_id, convert_id, log_id, ["failure"],
-    )
+    client.create_connection_within_pg(pg_id, convert_id, put_s3_id, ["success"])
+    client.create_connection_within_pg(pg_id, convert_id, log_id, ["failure"])
 
     client.create_connection_within_pg(pg_id, put_db_id, log_id, ["failure", "retry"])
+    client.create_connection_within_pg(pg_id, put_s3_id, log_s3_id, ["failure"])
 
 
 def build_pg08_kafka_anomalies(
@@ -1020,7 +1064,11 @@ def build_pg09_compliance(
 def build_pg10_dead_letter_queue(
     client: NiFiClient, pg_id: str, ports: dict, svc_ids: dict
 ) -> None:
-    """PG-10: Dead Letter Queue - Capture, log, and archive failed records."""
+    """PG-10: Dead Letter Queue - Capture, log, and archive failed records.
+
+    Failed records are sent to 3 destinations in parallel:
+    disk (PutFile), Kafka DLQ topic, and MinIO sensor-dlq bucket.
+    """
     logger.info("Building PG-10: Dead Letter Queue")
 
     input_port_id = ports["input"].get("input")
@@ -1085,10 +1133,33 @@ def build_pg10_dead_letter_queue(
         comments="Publishes failed records to Kafka DLQ topic for monitoring dashboards",
     )
 
+    # PutS3Object: Archive failed records to MinIO sensor-dlq bucket
+    put_s3_dlq = client.create_processor(
+        pg_id=pg_id,
+        name="ArchiveToDLQBucket",
+        processor_type="org.apache.nifi.processors.aws.s3.PutS3Object",
+        position={"x": -200, "y": 1000},
+        properties={
+            "Bucket": "#{minio.bucket.dlq}",
+            "Object Key": "dlq/${dlq.source.stage}/"
+                "${now():format('yyyy/MM/dd')}/"
+                "${sensor_id}_${now():format('HHmmssSSS')}_${UUID()}.json",
+            "Region": "#{minio.region}",
+            "Endpoint Override URL": "#{minio.endpoint.url}",
+            "AWS Credentials Provider service": svc_ids.get("MinIO-S3-Credentials", ""),
+            "Signer Override": "AWSS3V4SignerType",
+            "Communications Timeout": "30 secs",
+        },
+        auto_terminated=["success", "failure"],
+        comments="Archives failed records to MinIO sensor-dlq bucket, "
+                 "partitioned by source stage and date for analysis",
+    )
+
     meta_id = dlq_meta["id"]
     log_id = log_dlq["id"]
     file_id = put_file["id"]
     dlq_id = publish_dlq["id"]
+    s3_dlq_id = put_s3_dlq["id"]
 
     if input_port_id:
         client.create_connection_within_pg(
@@ -1098,9 +1169,10 @@ def build_pg10_dead_letter_queue(
 
     client.create_connection_within_pg(pg_id, meta_id, log_id, ["success"])
 
-    # After logging, fan out to disk archive + kafka DLQ
+    # After logging, fan out to disk archive + kafka DLQ + MinIO DLQ
     client.create_connection_within_pg(pg_id, log_id, file_id, ["success"])
     client.create_connection_within_pg(pg_id, log_id, dlq_id, ["success"])
+    client.create_connection_within_pg(pg_id, log_id, s3_dlq_id, ["success"])
 
 
 # ---------------------------------------------------------------------------
