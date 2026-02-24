@@ -18,7 +18,15 @@ Sensors (250+) → MQTT/REST → NiFi (10 PGs) → Kafka (7 topics) → Timescal
 ✅ **CI/CD: 100% green** (194 tests passing, all linters)
 ✅ **Full HTTPS/SASL/Auth** implementation across all services
 
-📊 **[View Complete Architecture Diagram](diagrams/architecture-complete.excalidraw)** (open in [Excalidraw](https://excalidraw.com))
+### Architecture Diagrams (open in [Excalidraw](https://excalidraw.com))
+
+| Diagram | Description |
+|---------|-------------|
+| [Architecture Overview](diagrams/architecture-overview.excalidraw) | 16 services with technology logos, versions, ports, and features |
+| [Data Flow Pipeline](diagrams/data-flow.excalidraw) | End-to-end: IoT Sensors → MQTT → NiFi → Kafka → TimescaleDB → Grafana |
+| [NiFi Process Groups](diagrams/nifi-process-groups.excalidraw) | 10 PGs with processors, connections, and data flow |
+| [Observability Stack](diagrams/observability-stack.excalidraw) | Prometheus → Grafana + Alertmanager + scrape targets |
+| [Security Architecture](diagrams/security-architecture.excalidraw) | 4 security layers: Network, Auth, Encryption, Monitoring |
 
 ---
 
