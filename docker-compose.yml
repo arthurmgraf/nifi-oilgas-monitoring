@@ -33,6 +33,7 @@ services:
       # --- Web server (HTTPS mode - enables Single User Login) ---
       NIFI_WEB_HTTPS_PORT: 8443
       NIFI_WEB_HTTPS_HOST: 0.0.0.0
+      NIFI_WEB_PROXY_HOST: "localhost:${NIFI_WEB_PORT:-8443},0.0.0.0:${NIFI_WEB_PORT:-8443}"
       # --- Authentication ---
       SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?NIFI_PASSWORD is required (min 12 chars)}
