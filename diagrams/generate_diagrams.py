@@ -3,13 +3,17 @@ import json
 import re
 import os
 import random
+import hashlib
 
 DIAGRAMS_DIR = os.path.dirname(os.path.abspath(__file__))
 KB_DIR = os.path.join(DIAGRAMS_DIR, "..", ".claude", "kb", "diagram-generation", "logos")
 
+# Global tracker for files used in the current diagram
+_current_files = {}
+
 
 def load_logos():
-    """Load all logos from KB markdown files."""
+    """Load all logos from KB markdown files. Returns {key: {"hash": str, "dataURL": str}}."""
     logos = {}
     for fname in ["general.md", "custom.md"]:
         fpath = os.path.join(KB_DIR, fname)
@@ -17,14 +21,14 @@ def load_logos():
             continue
         with open(fpath, "r", encoding="utf-8") as f:
             content = f.read()
-        # Extract fileId and dataURL pairs from Files Entry sections
         file_entries = re.findall(
             r'"(\w+_logo)":\s*\{[^}]*"dataURL":\s*"(data:image/svg\+xml;base64,[^"]+)"',
             content,
             re.DOTALL,
         )
         for file_id, data_url in file_entries:
-            logos[file_id] = data_url
+            file_hash = hashlib.sha256(data_url.encode()).hexdigest()[:40]
+            logos[file_id] = {"hash": file_hash, "dataURL": data_url}
     return logos
 
 
@@ -61,8 +65,17 @@ def make_rect(x, y, w, h, stroke="#000000", fill="#ffffff", sw=1.5, group=None, 
     return el
 
 
-def make_image(x, y, data_url, w=48, h=48, group=None):
-    """Create image element with inline data URL as fileId (Excalidraw compatible)."""
+def make_image(x, y, logo_entry, w=48, h=48, group=None):
+    """Create image element using hash-based fileId referencing the files object."""
+    global _current_files
+    file_hash = logo_entry["hash"]
+    _current_files[file_hash] = {
+        "mimeType": "image/svg+xml",
+        "id": file_hash,
+        "dataURL": logo_entry["dataURL"],
+        "created": 1740000000000,
+        "lastRetrieved": 1740000000000,
+    }
     el = {
         "type": "image", "id": uid(), "x": x, "y": y, "width": w, "height": h,
         "strokeColor": "transparent", "backgroundColor": "transparent",
@@ -70,7 +83,7 @@ def make_image(x, y, data_url, w=48, h=48, group=None):
         "groupIds": [group] if group else [], "roundness": None,
         "seed": random.randint(1, 999999999), "version": 1, "versionNonce": random.randint(1, 999999999),
         "isDeleted": False, "boundElements": None, "updated": 1, "link": None, "locked": False,
-        "status": "saved", "fileId": data_url, "scale": [1, 1],
+        "status": "saved", "fileId": file_hash, "scale": [1, 1],
     }
     return el
 
@@ -109,16 +122,19 @@ def make_line(x1, y1, x2, y2, color="#d1d5db"):
 
 
 def save_excalidraw(filename, elements):
+    global _current_files
     data = {
         "type": "excalidraw", "version": 2, "source": "https://excalidraw.com",
         "elements": elements, "appState": {"gridSize": None, "viewBackgroundColor": "#ffffff"},
-        "files": {},
+        "files": dict(_current_files),
     }
     path = os.path.join(DIAGRAMS_DIR, filename)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
-    print(f"  Created: {filename} ({len(elements)} elements)")
+    n_files = len(_current_files)
+    _current_files = {}
+    print(f"  Created: {filename} ({len(elements)} elements, {n_files} images)")
 
 
 # ─── SERVICE DATA ────────────────────────────────────────────────
