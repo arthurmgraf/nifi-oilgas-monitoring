@@ -128,7 +128,9 @@ services:
       KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
       KAFKA_SUPER_USERS: "User:admin"
       # --- JAAS config via env var (KAFKA_OPTS loads the file) ---
-      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf -DKAFKA_SASL_PASSWORD=${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}"
+      KAFKA_OPTS: >-
+        -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf
+        -DKAFKA_SASL_PASSWORD=${KAFKA_SASL_PASSWORD:?required}
       # --- Broker settings ---
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
