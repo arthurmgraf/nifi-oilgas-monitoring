@@ -22,12 +22,24 @@ MAX_RETRIES=30
 RETRY_INTERVAL=5
 
 # ---------------------------------------------------------------------------
+# Generate SASL client properties for CLI tools
+# ---------------------------------------------------------------------------
+SASL_CONFIG="/tmp/kafka-client.properties"
+cat > "${SASL_CONFIG}" <<EOF
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="admin-secret";
+EOF
+
+echo "[kafka-init] SASL client config written to ${SASL_CONFIG}"
+
+# ---------------------------------------------------------------------------
 # Wait for Kafka broker to be ready
 # ---------------------------------------------------------------------------
 echo "[kafka-init] Waiting for Kafka broker at ${BOOTSTRAP_SERVER} ..."
 
 retries=0
-until kafka-broker-api-versions --bootstrap-server "${BOOTSTRAP_SERVER}" > /dev/null 2>&1; do
+until kafka-broker-api-versions --bootstrap-server "${BOOTSTRAP_SERVER}" --command-config "${SASL_CONFIG}" > /dev/null 2>&1; do
     retries=$((retries + 1))
     if [ "${retries}" -ge "${MAX_RETRIES}" ]; then
         echo "[kafka-init] ERROR: Kafka not ready after $((MAX_RETRIES * RETRY_INTERVAL))s. Exiting."
@@ -52,6 +64,7 @@ create_topic() {
 
     kafka-topics \
         --bootstrap-server "${BOOTSTRAP_SERVER}" \
+        --command-config "${SASL_CONFIG}" \
         --create \
         --if-not-exists \
         --topic "${topic_name}" \
@@ -103,6 +116,7 @@ echo ""
 echo "[kafka-init] ===== Topic summary ====="
 kafka-topics \
     --bootstrap-server "${BOOTSTRAP_SERVER}" \
+    --command-config "${SASL_CONFIG}" \
     --list
 
 echo ""

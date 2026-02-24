@@ -9,13 +9,19 @@ Fixes:
 6. Verify all relationships are properly terminated
 """
 
-import requests
+import os
 import time
-import sys
 
-base = "http://localhost:8080/nifi-api"
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+NIFI_URL = os.environ.get("NIFI_URL", "https://localhost:8443")
+base = f"{NIFI_URL}/nifi-api"
 s = requests.Session()
 s.headers.update({"Accept": "application/json", "Content-Type": "application/json"})
+s.verify = False
 
 root_id = "83e6edba-019c-1000-c32f-bcc77a22e032"
 param_ctx_id = "83ff85a8-019c-1000-28c8-1cae2ff8045e"
@@ -332,7 +338,6 @@ def organize_processor_positions():
             .json()
             .get("processors", [])
         )
-        pg_name = "?"
         for p in procs:
             name = p["component"]["name"]
             if name in layout:

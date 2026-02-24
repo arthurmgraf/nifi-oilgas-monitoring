@@ -1,12 +1,19 @@
 """Fix PutSQL quoting issue - NiFi EL single quotes need double-quote wrapping."""
 
-import requests
-import time
+import os
 import subprocess
+import time
 
-base = "http://localhost:8080/nifi-api"
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+NIFI_URL = os.environ.get("NIFI_URL", "https://localhost:8443")
+base = f"{NIFI_URL}/nifi-api"
 s = requests.Session()
 s.headers.update({"Accept": "application/json", "Content-Type": "application/json"})
+s.verify = False
 
 root_id = "83e6edba-019c-1000-c32f-bcc77a22e032"
 

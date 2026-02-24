@@ -6,7 +6,7 @@ processors, forming the complete end-to-end data pipeline:
   MQTT -> Validation -> Enrichment -> Anomaly Detection -> Storage/Kafka/Alerts
 
 Usage:
-    python create-processors.py [--nifi-url http://localhost:8080] [--env-file .env.dev]
+    python create-processors.py [--nifi-url https://localhost:8443] [--env-file .env.dev]
 
 Prerequisites:
     - create-flow.py must have been run first (process groups, ports, connections exist)
@@ -1221,8 +1221,8 @@ def main() -> None:
         description="Create NiFi processors inside process groups for end-to-end data flow",
     )
     parser.add_argument(
-        "--nifi-url", default="http://localhost:8080",
-        help="NiFi base URL (default: http://localhost:8080)",
+        "--nifi-url", default=os.environ.get("NIFI_URL", "https://localhost:8443"),
+        help="NiFi base URL (default: https://localhost:8443)",
     )
     parser.add_argument(
         "--env-file", default=None,

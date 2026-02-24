@@ -7,12 +7,12 @@ to run as a one-time setup script after the NiFi Docker container is healthy.
 Usage:
     export NIFI_USERNAME=admin
     export NIFI_PASSWORD=admin_password
-    python create-flow.py [--nifi-url http://localhost:8080] [--env-file .env.dev]
+    python create-flow.py [--nifi-url https://localhost:8443] [--env-file .env.dev]
 
 Environment Variables:
     NIFI_USERNAME: NiFi admin username (required for HTTPS mode)
     NIFI_PASSWORD: NiFi admin password (required for HTTPS mode)
-    NIFI_URL:      NiFi base URL (default: http://localhost:8080)
+    NIFI_URL:      NiFi base URL (default: https://localhost:8443)
 """
 
 from __future__ import annotations
@@ -878,8 +878,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--nifi-url",
-        default="http://localhost:8080",
-        help="NiFi base URL (default: http://localhost:8080)",
+        default=os.environ.get("NIFI_URL", "https://localhost:8443"),
+        help="NiFi base URL (default: https://localhost:8443)",
     )
     parser.add_argument(
         "--context",

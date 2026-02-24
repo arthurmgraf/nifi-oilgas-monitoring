@@ -347,7 +347,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kafka_consumer_group_lag{group=~\"nifi.*\"})",
+          "expr": "sum(kafka_consumergroup_lag{consumergroup=~\"nifi.*\"})",
           "instant": true,
           "legendFormat": "Consumer Lag",
           "range": false,

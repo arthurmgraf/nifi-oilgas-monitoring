@@ -9,7 +9,7 @@ datasources:
     database: sensordb
     user: grafana_reader
     secureJsonData:
-      password: grafana_readonly_pass
+      password: ${GF_DATASOURCE_TSDB_PASSWORD}
     jsonData:
       sslmode: disable
       maxOpenConns: 10
@@ -27,7 +27,7 @@ datasources:
     database: refdata
     user: grafana_reader
     secureJsonData:
-      password: grafana_readonly_pass
+      password: ${GF_DATASOURCE_PG_PASSWORD}
     jsonData:
       sslmode: disable
       maxOpenConns: 5

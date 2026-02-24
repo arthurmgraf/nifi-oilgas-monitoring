@@ -4,7 +4,7 @@ Configures NiFi's built-in PrometheusReportingTask to expose metrics
 at port 9093, which Prometheus scrapes for the Pipeline Health dashboard.
 
 Usage:
-    python enable-prometheus-reporting.py [--nifi-url http://localhost:8080]
+    python enable-prometheus-reporting.py [--nifi-url https://localhost:8443]
 
 Prerequisites:
     - NiFi must be running and accessible
@@ -154,8 +154,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--nifi-url",
-        default=os.environ.get("NIFI_URL", "http://localhost:8080"),
-        help="NiFi base URL (default: http://localhost:8080)",
+        default=os.environ.get("NIFI_URL", "https://localhost:8443"),
+        help="NiFi base URL (default: https://localhost:8443)",
     )
     parser.add_argument(
         "--no-wait",

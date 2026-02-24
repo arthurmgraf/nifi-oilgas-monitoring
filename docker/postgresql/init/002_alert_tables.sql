@@ -39,6 +39,8 @@ CREATE INDEX IF NOT EXISTS idx_alerts_unresolved ON alert_history(resolved, dete
     WHERE resolved = FALSE;
 
 -- Read-only user for Grafana
+-- Password set here is the init default; override at runtime with:
+--   ALTER ROLE grafana_reader WITH PASSWORD '<value from GRAFANA_READER_PASSWORD env>';
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'grafana_reader') THEN
@@ -52,6 +54,8 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO grafana_reader;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO grafana_reader;
 
 -- NiFi service user
+-- Password set here is the init default; override at runtime with:
+--   ALTER ROLE nifi WITH PASSWORD '<value from PG_REF_PASSWORD env>';
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'nifi') THEN

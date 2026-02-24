@@ -17,7 +17,7 @@ class GeneratorConfig:
 
     mqtt_broker: str = "localhost"
     mqtt_port: int = 1883
-    nifi_http_url: str = "http://localhost:8080"
+    nifi_http_url: str = "https://localhost:8443"
     platforms: list[str] = field(
         default_factory=lambda: ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO"]
     )
@@ -34,7 +34,9 @@ class GeneratorConfig:
         return cls(
             mqtt_broker=os.environ.get("MQTT_BROKER", "localhost"),
             mqtt_port=int(os.environ.get("MQTT_PORT", "1883")),
-            nifi_http_url=os.environ.get("NIFI_HTTP_URL", "http://localhost:8080"),
+            nifi_http_url=os.environ.get(
+                "NIFI_HTTPS_URL", os.environ.get("NIFI_HTTP_URL", "https://localhost:8443")
+            ),
             platforms=platforms,
             interval_seconds=int(os.environ.get("INTERVAL_SECONDS", "2")),
             anomaly_probability=float(os.environ.get("ANOMALY_PROBABILITY", "0.05")),

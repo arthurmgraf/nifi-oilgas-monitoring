@@ -24,8 +24,8 @@ COPY --chown=nifi:nifi conf/logback.xml    /opt/nifi/nifi-current/conf/logback.x
 # 4. Switch back to NiFi user
 USER nifi
 
-# 5. Health check (NiFi 1.x HTTP mode on 8080)
+# 5. Health check (NiFi 1.x HTTPS mode on 8443)
 HEALTHCHECK --interval=30s --timeout=15s --start-period=300s --retries=5 \
-    CMD curl -sf http://localhost:8080/nifi-api/system-diagnostics > /dev/null || exit 1
+    CMD curl -ksf https://localhost:8443/nifi-api/system-diagnostics > /dev/null || exit 1
 
-EXPOSE 8080
+EXPOSE 8443

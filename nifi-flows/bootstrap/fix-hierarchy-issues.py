@@ -11,6 +11,7 @@ Run: python fix-hierarchy-issues.py --nifi-url http://15.235.61.251:8080
 import argparse
 import json
 import logging
+import os
 import time
 import urllib.request
 import urllib.error
@@ -19,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
                     datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-NIFI_URL = "http://15.235.61.251:8080"
+NIFI_URL = os.environ.get("NIFI_URL", "https://localhost:8443")
 
 
 class NiFi:

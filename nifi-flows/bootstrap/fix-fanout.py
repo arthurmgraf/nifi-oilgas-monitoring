@@ -5,13 +5,19 @@ This script replaces all DuplicateFlowFile processors with direct connections fr
 upstream processor to multiple output ports.
 """
 
-import requests
-import json
+import os
 import time
 
-base = "http://localhost:8080/nifi-api"
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+NIFI_URL = os.environ.get("NIFI_URL", "https://localhost:8443")
+base = f"{NIFI_URL}/nifi-api"
 s = requests.Session()
 s.headers.update({"Accept": "application/json", "Content-Type": "application/json"})
+s.verify = False
 
 
 def delete_processor_and_connections(pg_id, proc_id):

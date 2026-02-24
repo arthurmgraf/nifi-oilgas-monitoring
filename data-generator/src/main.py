@@ -206,7 +206,7 @@ def _publish_readings(
 @click.option(
     "--nifi-url",
     default=None,
-    help="NiFi ListenHTTP URL (overrides NIFI_HTTP_URL env var).",
+    help="NiFi ListenHTTP URL (overrides NIFI_HTTPS_URL env var).",
 )
 def main(
     broker: str | None,

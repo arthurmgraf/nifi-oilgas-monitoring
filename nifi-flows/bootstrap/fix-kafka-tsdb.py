@@ -7,13 +7,19 @@ Issues:
    - Add ReplaceText to rename 'timestamp' -> 'time' and convert epoch ms to ISO 8601
 """
 
-import requests
-import json
+import os
 import time
 
-base = "http://localhost:8080/nifi-api"
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+NIFI_URL = os.environ.get("NIFI_URL", "https://localhost:8443")
+base = f"{NIFI_URL}/nifi-api"
 s = requests.Session()
 s.headers.update({"Accept": "application/json", "Content-Type": "application/json"})
+s.verify = False
 
 
 def update_processor(proc_id, properties=None, auto_terminated=None):

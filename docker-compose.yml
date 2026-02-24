@@ -1,7 +1,7 @@
 # =============================================================================
 # NiFi Oil & Gas Monitoring Platform - Docker Compose
 # =============================================================================
-# 12 services with profile-based deployment (dev, staging, prod).
+# 16 services with profile-based deployment (dev, staging, prod).
 #
 # Usage:
 #   docker compose --profile dev    up -d        # Development
@@ -28,11 +28,11 @@ services:
     container_name: oilgas-nifi
     hostname: nifi
     ports:
-      - "${NIFI_WEB_PORT:-8080}:8080"
+      - "${NIFI_WEB_PORT:-8443}:8443"
     environment:
-      # --- Web server (HTTP mode for dev) ---
-      NIFI_WEB_HTTP_PORT: 8080
-      NIFI_WEB_HTTP_HOST: 0.0.0.0
+      # --- Web server (HTTPS mode - enables Single User Login) ---
+      NIFI_WEB_HTTPS_PORT: 8443
+      NIFI_WEB_HTTPS_HOST: 0.0.0.0
       # --- Authentication ---
       SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?NIFI_PASSWORD is required (min 12 chars)}
@@ -64,6 +64,8 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
       # --- MQTT ---
       MQTT_BROKER_URI: tcp://mosquitto:1883
+      MQTT_USERNAME: ${MQTT_USERNAME:-nifi}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
     volumes:
       - nifi-data:/opt/nifi/nifi-current/flowfile_repository
       - nifi-content:/opt/nifi/nifi-current/content_repository
@@ -78,7 +80,7 @@ services:
       timescaledb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/nifi-api/system-diagnostics > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -ksf https://localhost:8443/nifi-api/system-diagnostics > /dev/null || exit 1"]
       interval: 60s
       timeout: 30s
       start_period: 600s
@@ -95,35 +97,39 @@ services:
     image: apache/nifi-registry:1.28.1
     container_name: oilgas-nifi-registry
     hostname: nifi-registry
-    ports:
-      - "${NIFI_REGISTRY_PORT:-18080}:18080"
+    # Port not exposed to host — access via NiFi internal network only
     networks:
       - oilgas-net
     restart: unless-stopped
     profiles: ["dev", "staging", "prod"]
 
   # =========================================================================
-  # 3. Confluent Kafka 7.7.1 (Event Streaming - KRaft mode)
+  # 3. Confluent Kafka 7.7.1 (Event Streaming - KRaft mode, SASL/PLAIN)
   # =========================================================================
   kafka:
     image: confluentinc/cp-kafka:7.7.1
     container_name: oilgas-kafka
     hostname: kafka
-    ports:
-      - "${KAFKA_BROKER_PORT:-9092}:9092"
-      - "${KAFKA_INTERNAL_PORT:-29092}:29092"
+    # Ports not exposed to host — NiFi and other services connect via internal network
     environment:
       # --- KRaft mode (no Zookeeper) ---
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      # --- Listeners ---
-      # Dev: PLAINTEXT for simplicity. Staging/Prod: SASL_SSL via NiFi Parameter Contexts.
-      KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # --- Listeners (SASL_PLAINTEXT for external + internal) ---
+      KAFKA_LISTENERS: SASL_PLAINTEXT://:9092,SASL_INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: SASL_PLAINTEXT://localhost:9092,SASL_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_INTERNAL:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: SASL_INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # --- SASL configuration ---
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
+      KAFKA_SUPER_USERS: "User:admin"
+      # --- JAAS config via env var (KAFKA_OPTS loads the file) ---
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf"
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:-}
       # --- Broker settings ---
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -133,6 +139,8 @@ services:
       CLUSTER_ID: oilgas-kafka-cluster-001
       # --- Logging ---
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+    volumes:
+      - ./docker/kafka/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 > /dev/null 2>&1 || exit 1"]
       interval: 15s
@@ -145,7 +153,7 @@ services:
     profiles: ["dev", "staging", "prod"]
 
   # =========================================================================
-  # 4. Kafka Init (Topic Creation - one-shot)
+  # 4. Kafka Init (Topic Creation - one-shot, SASL auth)
   # =========================================================================
   kafka-init:
     image: confluentinc/cp-kafka:7.7.1
@@ -153,8 +161,11 @@ services:
     entrypoint: ["/bin/bash", "/scripts/create-topics.sh"]
     environment:
       KAFKA_BOOTSTRAP_SERVER: kafka:29092
+      # --- SASL auth for admin operations ---
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_client_jaas.conf"
     volumes:
       - ./docker/kafka/create-topics.sh:/scripts/create-topics.sh:ro
+      - ./docker/kafka/kafka_server_jaas.conf:/etc/kafka/kafka_client_jaas.conf:ro
     depends_on:
       kafka:
         condition: service_healthy
@@ -164,20 +175,26 @@ services:
     profiles: ["dev", "staging", "prod"]
 
   # =========================================================================
-  # 5. Confluent Schema Registry 7.7.1
+  # 5. Confluent Schema Registry 7.7.1 (SASL auth to Kafka)
   # =========================================================================
   schema-registry:
     image: confluentinc/cp-schema-registry:7.7.1
     container_name: oilgas-schema-registry
     hostname: schema-registry
-    ports:
-      - "${SCHEMA_REGISTRY_PORT:-8081}:8081"
+    # Port not exposed to host — NiFi connects via internal network
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
       SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: BACKWARD
       SCHEMA_REGISTRY_DEBUG: "false"
+      # --- SASL authentication to Kafka ---
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: PLAIN
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="schemaregistry"
+        password="sr-kafka-pass";
     depends_on:
       kafka:
         condition: service_healthy
@@ -199,8 +216,7 @@ services:
     image: postgres:16-alpine
     container_name: oilgas-postgres
     hostname: postgres
-    ports:
-      - "${PG_REF_PORT:-5432}:5432"
+    # Port not exposed to host — NiFi and Grafana connect via internal network
     environment:
       POSTGRES_DB: ${PG_REF_DATABASE:-refdata}
       POSTGRES_USER: ${PG_REF_USERNAME:-nifi}
@@ -223,11 +239,10 @@ services:
   # 7. TimescaleDB (Time-Series Storage)
   # =========================================================================
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:2.17.2-pg16
     container_name: oilgas-timescaledb
     hostname: timescaledb
-    ports:
-      - "${TSDB_PORT:-5433}:5432"
+    # Port not exposed to host — NiFi and Grafana connect via internal network
     environment:
       POSTGRES_DB: ${TSDB_DATABASE:-sensordb}
       POSTGRES_USER: ${TSDB_USERNAME:-nifi}
@@ -250,11 +265,11 @@ services:
   # 8. MinIO (S3-Compatible Data Lake)
   # =========================================================================
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
     container_name: oilgas-minio
     hostname: minio
     ports:
-      - "${MINIO_PORT:-9000}:9000"
+      # Only Console exposed to host; API port internal only
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     command: server /data --console-address ":9001"
     environment:
@@ -314,6 +329,9 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "http://localhost:${GRAFANA_PORT:-3000}"
       GF_INSTALL_PLUGINS: ""
+      # --- Datasource credentials (env var substitution in provisioning YAML) ---
+      GF_DATASOURCE_TSDB_PASSWORD: ${GRAFANA_READER_PASSWORD:-grafana_readonly_pass}
+      GF_DATASOURCE_PG_PASSWORD: ${GRAFANA_READER_PASSWORD:-grafana_readonly_pass}
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -341,9 +359,9 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
-      - "--web.enable-lifecycle"
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     networks:
       - oilgas-net
@@ -351,15 +369,63 @@ services:
     profiles: ["dev", "staging", "prod"]
 
   # =========================================================================
-  # 12. Eclipse Mosquitto 2 (MQTT Broker)
+  # 12. Kafka Exporter (Kafka Metrics for Prometheus)
+  # =========================================================================
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.7.0
+    container_name: oilgas-kafka-exporter
+    hostname: kafka-exporter
+    command:
+      - --kafka.server=kafka:29092
+      - --sasl.enabled
+      - --sasl.mechanism=plain
+      - --sasl.username=${KAFKA_SASL_USERNAME:-nifi}
+      - --sasl.password=${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
+      - --group.filter=.+
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 13. Alertmanager v0.27.0 (Alert Routing)
+  # =========================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: oilgas-alertmanager
+    hostname: alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    volumes:
+      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - oilgas-net
+    restart: unless-stopped
+    profiles: ["dev", "staging", "prod"]
+
+  # =========================================================================
+  # 14. Eclipse Mosquitto 2 (MQTT Broker - Password Auth)
   # =========================================================================
   mosquitto:
     image: eclipse-mosquitto:2
     container_name: oilgas-mosquitto
     hostname: mosquitto
-    ports:
-      - "${MQTT_PORT:-1883}:1883"
-      - "${MQTT_WS_PORT:-9883}:9883"
+    # Ports not exposed to host — data-generator and NiFi connect via internal network
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:-nifi}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
+    entrypoint: >
+      /bin/sh -c "
+      mosquitto_passwd -c -b /mosquitto/config/passwd $${MQTT_USERNAME} $${MQTT_PASSWORD} &&
+      echo '[mosquitto] Password file created for user: '$${MQTT_USERNAME} &&
+      exec mosquitto -c /mosquitto/config/mosquitto.conf
+      "
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto-data:/mosquitto/data
@@ -383,10 +449,12 @@ services:
     environment:
       MQTT_BROKER: mosquitto
       MQTT_PORT: "1883"
+      MQTT_USERNAME: ${MQTT_USERNAME:-nifi}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
       INTERVAL_SECONDS: "10"
       ANOMALY_PROBABILITY: "0.05"
       PLATFORMS: ALPHA,BRAVO,CHARLIE,DELTA,ECHO
-      NIFI_HTTP_URL: "http://nifi:8080"
+      NIFI_HTTPS_URL: "https://nifi:8443"
       LOG_LEVEL: INFO
     depends_on:
       mosquitto:

@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -635,7 +636,7 @@ def start_and_verify(nifi: NiFi, root_id: str) -> bool:
 # ---------------------------------------------------------------------------
 def main() -> None:
     parser = argparse.ArgumentParser(description="Reorganize NiFi flow into nested hierarchy")
-    parser.add_argument("--nifi-url", default="http://localhost:8080", help="NiFi base URL")
+    parser.add_argument("--nifi-url", default=os.environ.get("NIFI_URL", "https://localhost:8443"), help="NiFi base URL")
     parser.add_argument("--dry-run", action="store_true", help="Export only, no changes")
     args = parser.parse_args()
 

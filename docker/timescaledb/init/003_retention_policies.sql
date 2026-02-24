@@ -20,7 +20,9 @@ SELECT add_retention_policy('sensor_5min_agg',
 
 -- 15-minute aggregate: keep forever (no retention policy)
 
--- Create read-only user for Grafana
+-- Read-only user for Grafana
+-- Password set here is the init default; override at runtime with:
+--   ALTER ROLE grafana_reader WITH PASSWORD '<value from GRAFANA_READER_PASSWORD env>';
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'grafana_reader') THEN

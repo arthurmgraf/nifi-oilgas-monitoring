@@ -1,0 +1,67 @@
+groups:
+  - name: platform-critical
+    rules:
+      - alert: NiFiDown
+        expr: up{job="nifi"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NiFi is down"
+          description: "NiFi PrometheusReportingTask has been unreachable for more than 1 minute."
+
+      - alert: KafkaExporterDown
+        expr: up{job="kafka-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka exporter is down (Kafka may be unreachable)"
+          description: "kafka-exporter has been unreachable for more than 1 minute."
+
+  - name: platform-warning
+    rules:
+      - alert: NiFiQueueBackpressure
+        expr: nifi_amount_items_queued > 50000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NiFi queue backpressure threshold exceeded"
+          description: "NiFi has more than 50,000 items queued for over 5 minutes."
+
+      - alert: KafkaConsumerLag
+        expr: sum(kafka_consumergroup_lag) > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag is high"
+          description: "Total Kafka consumer lag exceeds 10,000 for over 5 minutes."
+
+      - alert: HighNiFiErrorRate
+        expr: rate(nifi_amount_flowfiles_removed[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High NiFi FlowFile removal rate"
+          description: "NiFi is removing more than 10 FlowFiles/sec for over 5 minutes."
+
+      - alert: NiFiActiveThreadsSaturated
+        expr: nifi_amount_active_threads > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NiFi active threads are saturated"
+          description: "NiFi has more than 50 active threads for over 5 minutes."
+
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target {{ $labels.job }} is down"
+          description: "Target {{ $labels.instance }} has been unreachable for 2 minutes."

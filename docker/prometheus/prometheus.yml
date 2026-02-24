@@ -2,6 +2,14 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
 scrape_configs:
   # NiFi metrics via PrometheusReportingTask (port 9093)
   # Enable with: python nifi-flows/bootstrap/enable-prometheus-reporting.py
@@ -13,6 +21,14 @@ scrape_configs:
       - targets: ["nifi:9093"]
         labels:
           instance: "nifi-primary"
+
+  # Kafka metrics via kafka-exporter
+  - job_name: "kafka-exporter"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+        labels:
+          instance: "kafka-primary"
 
   - job_name: "prometheus"
     static_configs:
