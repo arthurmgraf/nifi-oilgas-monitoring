@@ -265,7 +265,7 @@ services:
   # 8. MinIO (S3-Compatible Data Lake)
   # =========================================================================
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    image: minio/minio:RELEASE.2025-02-18T16-25-55Z
     container_name: oilgas-minio
     hostname: minio
     ports:
