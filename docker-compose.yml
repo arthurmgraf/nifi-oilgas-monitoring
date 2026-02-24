@@ -239,7 +239,7 @@ services:
   # 7. TimescaleDB (Time-Series Storage)
   # =========================================================================
   timescaledb:
-    image: timescale/timescaledb:2.17.2-pg16
+    image: timescale/timescaledb:2.25.1-pg16
     container_name: oilgas-timescaledb
     hostname: timescaledb
     # Port not exposed to host — NiFi and Grafana connect via internal network
