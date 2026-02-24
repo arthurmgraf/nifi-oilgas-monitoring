@@ -162,6 +162,7 @@ class NiFiClient:
             f"{self.base_url}/nifi-api/access/token",
             data={"username": self._username, "password": self._password},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
         )
 
         if resp.status_code != 201:
