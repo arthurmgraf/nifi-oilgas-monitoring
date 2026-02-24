@@ -423,6 +423,7 @@ services:
       MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
     entrypoint: >
       /bin/sh -c "
+      rm -f /mosquitto/config/passwd &&
       mosquitto_passwd -c -b /mosquitto/config/passwd $${MQTT_USERNAME} $${MQTT_PASSWORD} &&
       echo '[mosquitto] Password file created for user: '$${MQTT_USERNAME} &&
       exec mosquitto -c /mosquitto/config/mosquitto.conf
