@@ -425,6 +425,7 @@ services:
       /bin/sh -c "
       rm -f /mosquitto/config/passwd &&
       mosquitto_passwd -c -b /mosquitto/config/passwd $${MQTT_USERNAME} $${MQTT_PASSWORD} &&
+      chmod 644 /mosquitto/config/passwd &&
       echo '[mosquitto] Password file created for user: '$${MQTT_USERNAME} &&
       exec mosquitto -c /mosquitto/config/mosquitto.conf
       "
