@@ -61,7 +61,8 @@ def make_rect(x, y, w, h, stroke="#000000", fill="#ffffff", sw=1.5, group=None, 
     return el
 
 
-def make_image(x, y, file_id, w=48, h=48, group=None):
+def make_image(x, y, data_url, w=48, h=48, group=None):
+    """Create image element with inline data URL as fileId (Excalidraw compatible)."""
     el = {
         "type": "image", "id": uid(), "x": x, "y": y, "width": w, "height": h,
         "strokeColor": "transparent", "backgroundColor": "transparent",
@@ -69,7 +70,7 @@ def make_image(x, y, file_id, w=48, h=48, group=None):
         "groupIds": [group] if group else [], "roundness": None,
         "seed": random.randint(1, 999999999), "version": 1, "versionNonce": random.randint(1, 999999999),
         "isDeleted": False, "boundElements": None, "updated": 1, "link": None, "locked": False,
-        "status": "saved", "fileId": file_id, "scale": [1, 1],
+        "status": "saved", "fileId": data_url, "scale": [1, 1],
     }
     return el
 
@@ -107,11 +108,11 @@ def make_line(x1, y1, x2, y2, color="#d1d5db"):
     }
 
 
-def save_excalidraw(filename, elements, files):
+def save_excalidraw(filename, elements):
     data = {
         "type": "excalidraw", "version": 2, "source": "https://excalidraw.com",
         "elements": elements, "appState": {"gridSize": None, "viewBackgroundColor": "#ffffff"},
-        "files": files,
+        "files": {},
     }
     path = os.path.join(DIAGRAMS_DIR, filename)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -160,8 +161,6 @@ SERVICES = [
 def gen_architecture_overview(logos):
     """Diagram 1: Architecture Overview - 16 services in 4x4 grid."""
     elements = []
-    files = {}
-    used_logos = set()
 
     # Title
     elements.append(make_text(80, 30, "NiFi Oil & Gas Upstream Monitoring Platform", font_size=30, color="#000000", width=1500))
@@ -176,9 +175,7 @@ def gen_architecture_overview(logos):
 
     for row in range(4):
         ry = START_Y + row * (BOX_H + GAP_Y)
-        # Row label (vertical on left)
         elements.append(make_text(START_X - 5, ry - 25, row_labels[row], font_size=11, color="#9ca3af", width=1300))
-        # Separator line
         if row > 0:
             elements.append(make_line(START_X, ry - 15, START_X + 4 * BOX_W + 3 * GAP_X, ry - 15, color="#e5e7eb"))
 
@@ -189,51 +186,35 @@ def gen_architecture_overview(logos):
             bx = START_X + col * (BOX_W + GAP_X)
             by = ry
 
-            # Box
             elements.append(make_rect(bx, by, BOX_W, BOX_H, group=gid))
 
-            # Logo (centered)
+            # Logo - pass data URL directly as fileId
             if svc["logo"] and svc["logo"] in logos:
-                elements.append(make_image(bx + BOX_W / 2 - 24, by + 18, svc["logo"], group=gid))
-                used_logos.add(svc["logo"])
+                elements.append(make_image(bx + BOX_W / 2 - 24, by + 18, logos[svc["logo"]], group=gid))
             else:
-                # Shield placeholder for Security
                 elements.append(make_text(bx + BOX_W / 2 - 15, by + 22, "SEC", font_size=18, color="#374151", width=40, align="center", group=gid))
 
-            # Name
             elements.append(make_text(bx + 10, by + 78, svc["name"], font_size=15, color="#000000", width=BOX_W - 20, align="center", group=gid))
-            # Version
             elements.append(make_text(bx + 10, by + 100, svc["ver"], font_size=12, color="#6b7280", width=BOX_W - 20, align="center", group=gid))
-            # Separator
             elements.append(make_line(bx + 20, by + 122, bx + BOX_W - 20, by + 122, color="#e5e7eb"))
-            # Port
             elements.append(make_text(bx + 15, by + 132, svc["port"], font_size=12, color="#374151", width=BOX_W - 30, group=gid))
-            # Features
             feat_text = "\n".join(f"  {f}" for f in svc["features"])
             elements.append(make_text(bx + 15, by + 160, feat_text, font_size=12, color="#4a5568", width=BOX_W - 30, group=gid))
 
-    # Footer
     footer_y = START_Y + 4 * (BOX_H + GAP_Y) + 10
     elements.append(make_line(START_X, footer_y, START_X + 4 * BOX_W + 3 * GAP_X, footer_y, color="#d1d5db"))
     elements.append(make_text(START_X, footer_y + 15, "Security: HTTPS + Single-User Auth  |  Kafka SASL/PLAIN + SCRAM-SHA-512  |  MQTT Password Auth  |  TLS-Ready  |  Network: 4 exposed ports", font_size=12, color="#374151", width=1400))
 
-    # Files
-    for lid in used_logos:
-        files[lid] = {"mimeType": "image/svg+xml", "dataURL": logos[lid], "created": 1740000000000, "lastRetrieved": 1740000000000}
-
-    save_excalidraw("architecture-overview.excalidraw", elements, files)
+    save_excalidraw("architecture-overview.excalidraw", elements)
 
 
 def gen_data_flow(logos):
     """Diagram 2: Data Flow - horizontal pipeline."""
     elements = []
-    files = {}
-    used_logos = set()
 
     elements.append(make_text(80, 30, "Data Flow Pipeline", font_size=28, color="#000000", width=1200))
     elements.append(make_text(80, 70, "End-to-end data flow from IoT sensors to real-time dashboards", font_size=15, color="#4a5568", width=1200))
 
-    # Pipeline stages
     stages = [
         {"name": "IoT Sensors\n(250 sensors)", "logo": "eclipsemosquitto_logo", "x": 80, "desc": "MQTT Publish\n5 platforms"},
         {"name": "Eclipse\nMosquitto", "logo": "eclipsemosquitto_logo", "x": 350, "desc": "MQTT Broker\n:1883 (Auth)"},
@@ -251,18 +232,14 @@ def gen_data_flow(logos):
         sx = stage["x"]
         elements.append(make_rect(sx, BY, BOX_W, BOX_H, group=gid))
         if stage["logo"] in logos:
-            elements.append(make_image(sx + BOX_W / 2 - 24, BY + 15, stage["logo"], group=gid))
-            used_logos.add(stage["logo"])
+            elements.append(make_image(sx + BOX_W / 2 - 24, BY + 15, logos[stage["logo"]], group=gid))
         elements.append(make_text(sx + 10, BY + 75, stage["name"], font_size=14, color="#000000", width=BOX_W - 20, align="center", group=gid))
         elements.append(make_line(sx + 20, BY + 115, sx + BOX_W - 20, BY + 115, color="#e5e7eb"))
         elements.append(make_text(sx + 10, BY + 125, stage["desc"], font_size=12, color="#4a5568", width=BOX_W - 20, align="center", group=gid))
-
-        # Arrow to next
         if i < len(stages) - 1:
             next_x = stages[i + 1]["x"]
             elements.extend(make_arrow(sx + BOX_W + 5, BY + BOX_H / 2, next_x - 5, BY + BOX_H / 2))
 
-    # Secondary flows
     sec_y = BY + BOX_H + 80
     elements.append(make_text(80, sec_y, "Secondary Flows", font_size=16, color="#000000", width=500))
 
@@ -277,27 +254,21 @@ def gen_data_flow(logos):
     for i, flow in enumerate(sec_flows):
         fy = sec_y + 35 + i * 30
         if flow["logo"] in logos:
-            elements.append(make_image(80, fy - 5, flow["logo"], w=20, h=20))
-            used_logos.add(flow["logo"])
+            elements.append(make_image(80, fy - 5, logos[flow["logo"]], w=20, h=20))
         elements.append(make_text(110, fy, f"{flow['from']}  ->  {flow['to']}:  {flow['desc']}", font_size=12, color="#4a5568", width=1200))
 
-    for lid in used_logos:
-        files[lid] = {"mimeType": "image/svg+xml", "dataURL": logos[lid], "created": 1740000000000, "lastRetrieved": 1740000000000}
-
-    save_excalidraw("data-flow.excalidraw", elements, files)
+    save_excalidraw("data-flow.excalidraw", elements)
 
 
 def gen_nifi_process_groups(logos):
     """Diagram 3: NiFi Process Groups - 10 PGs with flow."""
     elements = []
-    files = {}
 
     elements.append(make_text(80, 30, "Apache NiFi Process Groups", font_size=28, color="#000000", width=1200))
     elements.append(make_text(80, 70, "10 Process Groups  |  31 Processors  |  :9443 (HTTPS + Single-User Auth)", font_size=15, color="#4a5568", width=1200))
 
     if "apachenifi_logo" in logos:
-        elements.append(make_image(80, 110, "apachenifi_logo"))
-        files["apachenifi_logo"] = {"mimeType": "image/svg+xml", "dataURL": logos["apachenifi_logo"], "created": 1740000000000, "lastRetrieved": 1740000000000}
+        elements.append(make_image(80, 110, logos["apachenifi_logo"]))
 
     pgs = [
         {"id": "PG-01", "name": "MQTT Ingestion", "procs": "ConsumeMQTT\nUpdateAttribute\nLogAttribute", "out": "raw-data"},
@@ -344,25 +315,21 @@ def gen_nifi_process_groups(logos):
     flow_y = START_Y + 3 * (BOX_H + GAP) + 20
     elements.append(make_text(START_X, flow_y, "Flow: PG-01 -> PG-02 -> PG-03 -> PG-04 (Kafka) + PG-05 (Anomaly) -> PG-06 -> PG-07 (Storage) + PG-08 (Kafka Alerts) -> PG-09 (Compliance) -> PG-10 (DLQ)", font_size=12, color="#4a5568", width=1200))
 
-    save_excalidraw("nifi-process-groups.excalidraw", elements, files)
+    save_excalidraw("nifi-process-groups.excalidraw", elements)
 
 
 def gen_observability(logos):
     """Diagram 4: Observability Stack."""
     elements = []
-    files = {}
-    used_logos = set()
 
     elements.append(make_text(80, 30, "Observability Stack", font_size=28, color="#000000", width=1200))
     elements.append(make_text(80, 70, "Metrics collection, alerting, and visualization", font_size=15, color="#4a5568", width=1200))
 
-    # Central hub: Prometheus
     PX, PY, PW, PH = 500, 200, 280, 220
     gid = uid()
     elements.append(make_rect(PX, PY, PW, PH, group=gid))
     if "prometheus_logo" in logos:
-        elements.append(make_image(PX + PW / 2 - 24, PY + 15, "prometheus_logo", group=gid))
-        used_logos.add("prometheus_logo")
+        elements.append(make_image(PX + PW / 2 - 24, PY + 15, logos["prometheus_logo"], group=gid))
     elements.append(make_text(PX + 10, PY + 75, "Prometheus", font_size=18, color="#000000", width=PW - 20, align="center", group=gid))
     elements.append(make_text(PX + 10, PY + 100, "v2.54.1  |  :9090", font_size=13, color="#6b7280", width=PW - 20, align="center", group=gid))
     elements.append(make_line(PX + 20, PY + 122, PX + PW - 20, PY + 122, color="#e5e7eb"))
@@ -381,8 +348,7 @@ def gen_observability(logos):
         gid2 = uid()
         elements.append(make_rect(tx, ty, 200, 55, group=gid2))
         if t["logo"] in logos:
-            elements.append(make_image(tx + 10, ty + 8, t["logo"], w=24, h=24, group=gid2))
-            used_logos.add(t["logo"])
+            elements.append(make_image(tx + 10, ty + 8, logos[t["logo"]], w=24, h=24, group=gid2))
         elements.append(make_text(tx + 42, ty + 8, t["name"], font_size=13, color="#000000", width=150, group=gid2))
         elements.append(make_text(tx + 42, ty + 28, t["port"], font_size=11, color="#6b7280", width=150, group=gid2))
         # Arrow to Prometheus
@@ -393,8 +359,7 @@ def gen_observability(logos):
     gid3 = uid()
     elements.append(make_rect(GX, GY, GW, GH, group=gid3))
     if "grafana_logo" in logos:
-        elements.append(make_image(GX + GW / 2 - 24, GY + 15, "grafana_logo", group=gid3))
-        used_logos.add("grafana_logo")
+        elements.append(make_image(GX + GW / 2 - 24, GY + 15, logos["grafana_logo"], group=gid3))
     elements.append(make_text(GX + 10, GY + 75, "Grafana", font_size=18, color="#000000", width=GW - 20, align="center", group=gid3))
     elements.append(make_text(GX + 10, GY + 100, "v11.4.0  |  :3000", font_size=13, color="#6b7280", width=GW - 20, align="center", group=gid3))
     elements.append(make_line(GX + 20, GY + 122, GX + GW - 20, GY + 122, color="#e5e7eb"))
@@ -408,7 +373,7 @@ def gen_observability(logos):
     gid4 = uid()
     elements.append(make_rect(AX, AY, AW, AH, group=gid4))
     if "prometheus_logo" in logos:
-        elements.append(make_image(AX + AW / 2 - 24, AY + 12, "prometheus_logo", group=gid4))
+        elements.append(make_image(AX + AW / 2 - 24, AY + 12, logos["prometheus_logo"], group=gid4))
     elements.append(make_text(AX + 10, AY + 68, "Alertmanager", font_size=18, color="#000000", width=AW - 20, align="center", group=gid4))
     elements.append(make_text(AX + 10, AY + 92, "v0.27.0  |  :9093", font_size=13, color="#6b7280", width=AW - 20, align="center", group=gid4))
     elements.append(make_text(AX + 15, AY + 115, "  Email notifications\n  Alert grouping & dedup", font_size=12, color="#4a5568", width=AW - 30, group=gid4))
@@ -416,17 +381,12 @@ def gen_observability(logos):
     # Arrow Prometheus -> Alertmanager
     elements.extend(make_arrow(PX + PW / 2, PY + PH + 5, AX + AW / 2, AY - 5, label="alerts"))
 
-    for lid in used_logos:
-        files[lid] = {"mimeType": "image/svg+xml", "dataURL": logos[lid], "created": 1740000000000, "lastRetrieved": 1740000000000}
-
-    save_excalidraw("observability-stack.excalidraw", elements, files)
+    save_excalidraw("observability-stack.excalidraw", elements)
 
 
 def gen_security(logos):
     """Diagram 5: Security Architecture."""
     elements = []
-    files = {}
-    used_logos = set()
 
     elements.append(make_text(80, 30, "Security Architecture", font_size=28, color="#000000", width=1200))
     elements.append(make_text(80, 70, "Platform Hardening  |  Grade: D -> B+  |  30 Vulnerabilities Remediated", font_size=15, color="#4a5568", width=1200))
@@ -471,8 +431,7 @@ def gen_security(logos):
         for j, item in enumerate(layer["items"]):
             iy = ly + 38 + j * 30
             if item["icon"] and item["icon"] in logos:
-                elements.append(make_image(START_X + 30, iy - 2, item["icon"], w=20, h=20))
-                used_logos.add(item["icon"])
+                elements.append(make_image(START_X + 30, iy - 2, logos[item["icon"]], w=20, h=20))
             elements.append(make_text(START_X + 60, iy, item["text"], font_size=12, color="#374151", width=LAYER_W - 80))
 
     # Audit summary box
@@ -489,10 +448,7 @@ def gen_security(logos):
         "8 sprints  |  20 files modified  |  16 services hardened  |  Pre-commit: Gitleaks + Ruff",
         font_size=12, color="#6b7280", width=LAYER_W - 30))
 
-    for lid in used_logos:
-        files[lid] = {"mimeType": "image/svg+xml", "dataURL": logos[lid], "created": 1740000000000, "lastRetrieved": 1740000000000}
-
-    save_excalidraw("security-architecture.excalidraw", elements, files)
+    save_excalidraw("security-architecture.excalidraw", elements)
 
 
 def main():
